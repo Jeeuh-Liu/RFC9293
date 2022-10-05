@@ -1,3 +1,3 @@
-module iptcp
+module tcpip
 
 go 1.19
