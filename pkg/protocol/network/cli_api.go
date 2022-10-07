@@ -1,4 +1,4 @@
-package ip
+package network
 
 import (
 	"bufio"
@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// ScanCLI
 /*
 	When to output '> ' ?
 	(1) After sending a cli to chan and  handling the cli, we can output a '>'
@@ -21,9 +22,15 @@ func (node *Node) ScanClI() {
 			line := scanner.Text()
 			if len(line) >= 2 && line[:2] == "li" {
 				if len(line) == 2 {
-					cli := NewCLI(LI, 0)
+					cli := NewCLI(LI, 0, []byte{})
 					node.NodeCLIChan <- cli
 				}
+			} else if len(line) >= 2 && line[:2] == "lr" {
+				if len(line) == 2 {
+					cli := NewCLI(LR, 0, []byte{})
+					node.NodeCLIChan <- cli
+				}
+
 			} else if len(line) >= 2 && len(strings.Split(line, " ")) == 2 && line[:2] == "up" {
 				cmds := strings.Split(line, " ")
 				id, err := strconv.Atoi(cmds[1])
@@ -36,7 +43,7 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// open link
-				cli := NewCLI(uint8(SetUpT), uint8(id))
+				cli := NewCLI(uint8(SetUpT), uint8(id), []byte{})
 				node.NodeCLIChan <- cli
 			} else if len(line) >= 4 && len(strings.Split(line, " ")) == 2 && line[:4] == "down" {
 				cmds := strings.Split(line, " ")
@@ -50,14 +57,37 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// close link
-				cli := NewCLI(uint8(SetDownT), uint8(id))
+				cli := NewCLI(uint8(SetDownT), uint8(id), []byte{})
 				node.NodeCLIChan <- cli
 			} else if line == "q" {
-				cli := NewCLI(Quit, 0)
+				cli := NewCLI(Quit, 0, []byte{})
 				node.NodeCLIChan <- cli
 			} else {
 				fmt.Printf("Invalid command\n> ")
 			}
+		}
+	}
+}
+
+// ******************************************************************
+// Output the data of CLI
+func (node *Node) HandleCLI() {
+	for {
+		fmt.Printf("> ")
+		cli := <-node.NodeCLIChan
+		switch cli.CLIType {
+		case LI:
+			node.PrintInterfaces()
+		case SetUpT:
+			node.SetUp(cli.ID)
+		case SetDownT:
+			node.SetDown(cli.ID)
+		case Quit:
+			node.Quit()
+		case LR:
+			node.PrintRoutes()
+		case RIP:
+			node.HandleRIP(cli.Bytes)
 		}
 	}
 }
