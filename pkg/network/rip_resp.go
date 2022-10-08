@@ -6,19 +6,19 @@ import (
 	"golang.org/x/net/ipv4"
 )
 
-type RIPPacket struct {
+type RIPResp struct {
 	Header *ipv4.Header
-	Body   *RIPBody
+	Body   *RIPRespBody
 }
 
-func (node *Node) NewRIP(IPLocal, IPRemote string) *RIPPacket {
-	rip := &RIPPacket{}
-	rip.Header = node.NewRIPHeader(IPLocal)
-	rip.Body = node.NewRIPBody(IPRemote)
+func (node *Node) NewRIPResp(IPLocal, IPRemote string) *RIPResp {
+	rip := &RIPResp{}
+	rip.Body = node.NewRIPRespBody(IPRemote)
+	rip.Header = node.NewRIPRespHeader(IPLocal, IPRemote, len(rip.Body.Marshal()))
 	return rip
 }
 
-func (rip *RIPPacket) Marshal() []byte {
+func (rip *RIPResp) Marshal() []byte {
 	bytes, err := rip.Header.Marshal()
 	// num of bytes in header is 20 bytes
 	// fmt.Printf("num of bytes of Header is %v\n", len(bytes))
@@ -30,13 +30,13 @@ func (rip *RIPPacket) Marshal() []byte {
 	return bytes
 }
 
-func UnmarshalRIP(bytes []byte) RIPPacket {
+func UnmarshalRIPResp(bytes []byte) RIPResp {
 	header, err := ipv4.ParseHeader(bytes[:20])
 	if err != nil {
 		log.Fatalln(err)
 	}
-	body := UnmarshalBody(bytes[20:])
-	rip := RIPPacket{
+	body := UnmarshalRespBody(bytes[20:])
+	rip := RIPResp{
 		Header: header,
 		Body:   body,
 	}

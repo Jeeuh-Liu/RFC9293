@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"os"
-	"tcpip/pkg/protocol/network"
+	"tcpip/pkg/network"
 )
 
 func main() {

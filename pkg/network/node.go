@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"tcpip/pkg/protocol/link"
+	"tcpip/pkg/link"
 	"time"
 )
 
@@ -58,19 +58,19 @@ func (node *Node) Make(args []string) {
 		li := &link.LinkInterface{}
 		if len(eles) == 2 {
 			udpPortLocal := eles[1]
-			node.MACLocal = ToIPColonAddr("localhost", udpPortLocal)
-			fmt.Println("MACLocal is", node.MACLocal)
+			node.MACLocal = ToIPColonAddr(eles[0], udpPortLocal)
+			// fmt.Println("MACLocal is", node.MACLocal)
 			continue
 		}
-		//id, udpIp, udpPortRemote, ipLocal, ipRemote
-		li.Make(id, eles[0], eles[1], eles[2], eles[3])
+		// elements: udpIp, udpPortRemote, ipLocal, ipRemote
+		//li.Make(udpIp, udpPortRemote, ipLocal, ipRemote, id, udpPortLocal)
+		li.Make(eles[0], eles[1], eles[2], eles[3], id)
 		fmt.Printf("%v: %v\n", id, eles[2])
 		node.ID2Interface[id] = li
 		id++
 	}
 	// fmt.Println(node)
 	// Initialize Routes: each interface to itself
-	// node.Routes = []Route{}
 	node.DestIP2Route = map[string]Route{}
 	for _, li := range node.ID2Interface {
 		route := Route{
@@ -91,8 +91,10 @@ func (node *Node) Make(args []string) {
 	go node.ServeLocalLink()
 	// Receive CLI
 	go node.ScanClI()
-	// Broadcast RIP periodically
-	go node.RIPDaemon()
+	// Broadcast RIP Request once
+	go node.RIPReqDaemon()
+	// Broadcast RIP Resp periodically
+	go node.RIPRespDaemon()
 }
 
 func ToIPColonAddr(udpIp, udpPort string) string {

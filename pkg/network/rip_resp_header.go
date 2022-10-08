@@ -29,19 +29,19 @@ import (
 }
 */
 
-func (node *Node) NewRIPHeader(IPLocal string) *ipv4.Header {
+func (node *Node) NewRIPRespHeader(IPLocal, IPRemote string, bodyLen int) *ipv4.Header {
 	header := &ipv4.Header{
-		Version:  0,
-		Len:      120,
+		Version:  4,
+		Len:      20,
 		TOS:      0,
-		TotalLen: 0,
+		TotalLen: 20 + bodyLen,
 		Flags:    0,
 		FragOff:  0,
-		TTL:      0,
+		TTL:      16,
 		Protocol: 200,
 		Checksum: 0,
-		Src:      str2netIP(IPLocal),
-		Dst:      make([]byte, 4),
+		Src:      net.ParseIP(IPLocal),
+		Dst:      net.ParseIP(IPRemote),
 	}
 	return header
 }

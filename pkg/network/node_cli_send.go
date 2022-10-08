@@ -91,10 +91,12 @@ func (node *Node) HandleCLI() {
 		case LR:
 			node.PrintRoutes()
 			fmt.Printf("> ")
-		case RIPBroadcast:
-			node.BroadcastRIP()
-		case RIPHandle:
-			node.HandleRIP(cli.Bytes)
+		case RIPRespBroadcast:
+			node.HandleBroadcastRIPResp()
+		case RIPReqBroadcast:
+			node.HandleBroadcastRIPReq()
+		case RIPRespHandle:
+			node.HandleRIPResp(cli.Bytes)
 		case RouteEx:
 			node.HandleRouteEx(cli.DestIP)
 		}

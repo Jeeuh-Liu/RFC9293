@@ -10,31 +10,31 @@ import (
 
 type Entry struct {
 	// 12 byte
-	cost    uint32
-	address uint32
-	mask    uint32
+	Cost    uint32
+	Address uint32
+	Mask    uint32
 }
 
 func NewEntry(route Route) Entry {
 	entry := Entry{
-		cost:    route.Cost,
-		address: str2ipv4Num(route.Dest),
-		mask:    1<<32 - 1,
+		Cost:    route.Cost,
+		Address: str2ipv4Num(route.Dest),
+		Mask:    1<<32 - 1,
 	}
 	return entry
 }
 
 func (entry Entry) Marshal() []byte {
 	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, entry.cost)
+	err := binary.Write(buf, binary.BigEndian, entry.Cost)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	err = binary.Write(buf, binary.BigEndian, entry.address)
+	err = binary.Write(buf, binary.BigEndian, entry.Address)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	err = binary.Write(buf, binary.BigEndian, entry.mask)
+	err = binary.Write(buf, binary.BigEndian, entry.Mask)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -47,9 +47,9 @@ func UnmarshalEntry(bytes []byte) Entry {
 	address := uint32(binary.BigEndian.Uint32(bytes[4:8]))
 	mask := uint32(binary.BigEndian.Uint32(bytes[8:]))
 	entry := Entry{
-		cost:    cost,
-		address: address,
-		mask:    mask,
+		Cost:    cost,
+		Address: address,
+		Mask:    mask,
 	}
 	return entry
 }

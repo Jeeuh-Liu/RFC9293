@@ -9,10 +9,12 @@ const (
 	Quit     = uint8(3)
 	LR       = uint8(4)
 	// Packet
-	RIPBroadcast = uint8(5)
-	RIPHandle    = uint8(6)
+	RIPReqBroadcast  = uint8(5)
+	RIPRespBroadcast = uint8(6)
+	RIPReqHandle     = uint8(7)
+	RIPRespHandle    = uint8(8)
 	// Expiration
-	RouteEx = uint8(7)
+	RouteEx = uint8(9)
 )
 
 type CLI struct {

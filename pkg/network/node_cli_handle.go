@@ -41,10 +41,19 @@ func (node *Node) PrintRoutes() {
 
 // BroadcastRIP
 // ***********************************************************************************
-func (node *Node) BroadcastRIP() {
+func (node *Node) HandleBroadcastRIPResp() {
 	// fmt.Println("Try to broadcast RIP")
 	for _, li := range node.ID2Interface {
-		rip := node.NewRIP(li.IPLocal, li.IPRemote)
+		rip := node.NewRIPResp(li.IPLocal, li.IPRemote)
+		bytes := rip.Marshal()
+		li.SendRIP(bytes)
+	}
+}
+
+func (node *Node) HandleBroadcastRIPReq() {
+	// fmt.Println("Try to broadcast RIP")
+	for _, li := range node.ID2Interface {
+		rip := node.NewRIPReq(li.IPLocal, li.IPRemote)
 		bytes := rip.Marshal()
 		li.SendRIP(bytes)
 	}
@@ -52,24 +61,28 @@ func (node *Node) BroadcastRIP() {
 
 // HandleRIP
 // ***********************************************************************************
-func (node *Node) HandleRIP(bytes []byte) {
-	rip := UnmarshalRIP(bytes)
-	num_entries := rip.Body.num_entries
+func (node *Node) HandleRIPResp(bytes []byte) {
+	rip := UnmarshalRIPResp(bytes)
+	num_entries := rip.Body.Num_Entries
 	for i := 0; i < int(num_entries); i++ {
-		entry := rip.Body.entries[i]
+		entry := rip.Body.Entries[i]
+		// if entry.cost == 16, sending back -> ignore
+		if entry.Cost == 16 {
+			continue
+		}
 		// Expiration time
-		destIP := ipv4Num2str(entry.address)
+		destIP := ipv4Num2str(entry.Address)
 		// fmt.Printf("newCost is %v\n", newCost)
 		// fmt.Printf("Receive a dest addr %v\n", destAddr)
 		node.RemoteDest2ExTime[destIP] = time.Now().Add(12 * time.Second)
 		go node.SendExTimeCLI(destIP)
+		// fmt.Println(rip.Header.Src)
 		// Min Cost
 		// if the dest addr exists in destAddr2Cost and new cost is bigger, ignore
-		newCost := entry.cost + 1
+		newCost := entry.Cost + 1
 		if cost, ok := node.RemoteDestIP2Cost[destIP]; ok && newCost >= cost {
 			continue
 		}
-		fmt.Println(rip.Header.Src)
 		nextAddr := netIP2str(rip.Header.Src)
 		// fmt.Printf("nextAddr is %v\n", nextAddr)
 		newRoute := NewRoute(destIP, nextAddr, newCost)
