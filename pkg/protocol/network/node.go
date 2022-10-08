@@ -23,12 +23,11 @@ type Node struct {
 	// Local MAC addr and UDPConn
 	MACLocal  string
 	LocalConn *net.UDPConn
-}
-
-type Route struct {
-	Dest string
-	Next string
-	Cost uint32
+	// RIP metadata
+	// check min_cost
+	RemoteDestIP2Cost map[string]uint32
+	// check Split Horizon with Poisoned Reverse
+	RemoteDestIP2SrcIP map[string]string
 }
 
 func (node *Node) Make(args []string) {
@@ -77,6 +76,10 @@ func (node *Node) Make(args []string) {
 		}
 		node.Routes = append(node.Routes, route)
 	}
+	// initialize map remote2cost
+	node.RemoteDestIP2Cost = map[string]uint32{}
+	// initialize map remoteDest2src
+	node.RemoteDestIP2SrcIP = map[string]string{}
 	// Receive UDP
 	go node.ServeLocalLink()
 	// Receive CLI

@@ -9,8 +9,8 @@ const (
 	Quit     = uint8(3)
 	LR       = uint8(4)
 	// packet
-	RIP  = uint8(5)
-	TEST = uint8(6)
+	RIPBroadcast = uint8(5)
+	RIPHandle    = uint8(6)
 )
 
 type CLI struct {

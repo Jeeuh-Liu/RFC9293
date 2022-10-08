@@ -72,21 +72,28 @@ func (node *Node) ScanClI() {
 // ******************************************************************
 // Output the data of CLI
 func (node *Node) HandleCLI() {
+	fmt.Printf("> ")
 	for {
-		fmt.Printf("> ")
 		cli := <-node.NodeCLIChan
 		switch cli.CLIType {
 		case LI:
 			node.PrintInterfaces()
+			fmt.Printf("> ")
 		case SetUpT:
 			node.SetUp(cli.ID)
+			fmt.Printf("> ")
 		case SetDownT:
 			node.SetDown(cli.ID)
+			fmt.Printf("> ")
 		case Quit:
 			node.Quit()
+			fmt.Printf("> ")
 		case LR:
 			node.PrintRoutes()
-		case RIP:
+			fmt.Printf("> ")
+		case RIPBroadcast:
+			node.BroadcastRIP()
+		case RIPHandle:
 			node.HandleRIP(cli.Bytes)
 		}
 	}

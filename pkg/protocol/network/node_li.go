@@ -1,12 +1,21 @@
 package network
 
 import (
-	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"golang.org/x/net/ipv4"
 )
+
+// Broadcast RIP through LinkInterface
+func (node *Node) RIPDaemon() {
+	for {
+		cli := NewCLI(RIPBroadcast, 0, []byte{})
+		node.NodeCLIChan <- cli
+		time.Sleep(5 * time.Second)
+	}
+}
 
 // Receive bytes though link
 func (node *Node) ServeLocalLink() {
@@ -26,6 +35,7 @@ func (node *Node) ServeLocalLink() {
 		// 	log.Fatalln(err)
 		// }
 		// fmt.Printf("Receive %v bytes\n", bnum)
+		// fmt.Println(node.LocalConn.RemoteAddr().String())
 		node.LocalConn.Read(bytes)
 
 		Header, err := ipv4.ParseHeader(bytes[:20])
@@ -34,13 +44,12 @@ func (node *Node) ServeLocalLink() {
 		}
 		switch Header.Protocol {
 		case 200:
-			fmt.Println("Receive a RIP")
-			CLI := NewCLI(RIP, 0, bytes[20:])
+			CLI := NewCLI(RIPHandle, 0, bytes)
 			node.NodeCLIChan <- CLI
 		case 0:
-			fmt.Println("Receive a TEST")
-			CLI := NewCLI(RIP, 0, bytes[20:])
-			node.NodeCLIChan <- CLI
+			// fmt.Println("Receive a TEST")
+			// CLI := NewCLI(RIP, 0, bytes)
+			// node.NodeCLIChan <- CLI
 		}
 	}
 }

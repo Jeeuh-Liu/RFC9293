@@ -37,7 +37,38 @@ func (node *Node) PrintRoutes() {
 	}
 }
 
+// BroadcastRIP
+func (node *Node) BroadcastRIP() {
+	// fmt.Println("Try to broadcast RIP")
+	for _, li := range node.ID2Interface {
+		rip := node.NewRIP(li.IPLocal, li.IPRemote)
+		bytes := rip.Marshal()
+		li.SendRIP(bytes)
+	}
+}
+
 // HandleRIP
 func (node *Node) HandleRIP(bytes []byte) {
-
+	rip := UnmarshalRIP(bytes)
+	num_entries := rip.Body.num_entries
+	for i := 0; i < int(num_entries); i++ {
+		entry := rip.Body.entries[i]
+		newCost := entry.cost + 1
+		// fmt.Printf("newCost is %v\n", newCost)
+		destAddr := ipv4Num2str(entry.address)
+		// fmt.Printf("Receive a dest addr %v\n", destAddr)
+		// if the dest addr exists in destAddr2Cost and new cost is bigger, ignore
+		if cost, ok := node.RemoteDestIP2Cost[destAddr]; ok && newCost >= cost {
+			continue
+		}
+		fmt.Println(rip.Header.Src)
+		nextAddr := netIP2str(rip.Header.Src)
+		// fmt.Printf("nextAddr is %v\n", nextAddr)
+		newRoute := NewRoute(destAddr, nextAddr, newCost)
+		// fmt.Println(newRoute)
+		node.Routes = append(node.Routes, newRoute)
+		// update the metadata
+		node.RemoteDestIP2Cost[destAddr] = newCost
+		node.RemoteDestIP2SrcIP[destAddr] = nextAddr
+	}
 }
