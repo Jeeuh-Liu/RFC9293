@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"tcpip/pkg/protocol/link"
+	"time"
 )
 
 // The driver program
@@ -28,6 +29,8 @@ type Node struct {
 	RemoteDestIP2Cost map[string]uint32
 	// check Split Horizon with Poisoned Reverse
 	RemoteDestIP2SrcIP map[string]string
+	// Check Expiration time of a routing entry
+	RemoteDest2ExTime map[string]time.Time
 }
 
 func (node *Node) Make(args []string) {
@@ -82,6 +85,8 @@ func (node *Node) Make(args []string) {
 	node.RemoteDestIP2Cost = map[string]uint32{}
 	// initialize map remoteDest2src
 	node.RemoteDestIP2SrcIP = map[string]string{}
+	// initialize map remoteDest2exTime
+	node.RemoteDest2ExTime = map[string]time.Time{}
 	// Receive UDP
 	go node.ServeLocalLink()
 	// Receive CLI

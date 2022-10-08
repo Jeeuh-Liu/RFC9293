@@ -11,7 +11,7 @@ import (
 // Broadcast RIP through LinkInterface
 func (node *Node) RIPDaemon() {
 	for {
-		cli := NewCLI(RIPBroadcast, 0, []byte{})
+		cli := NewCLI(RIPBroadcast, 0, []byte{}, "")
 		node.NodeCLIChan <- cli
 		time.Sleep(5 * time.Second)
 	}
@@ -44,7 +44,7 @@ func (node *Node) ServeLocalLink() {
 		}
 		switch Header.Protocol {
 		case 200:
-			CLI := NewCLI(RIPHandle, 0, bytes)
+			CLI := NewCLI(RIPHandle, 0, bytes, "")
 			node.NodeCLIChan <- CLI
 		case 0:
 			// fmt.Println("Receive a TEST")

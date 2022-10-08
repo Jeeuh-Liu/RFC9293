@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 // Handle CLI
@@ -56,11 +57,15 @@ func (node *Node) HandleRIP(bytes []byte) {
 	num_entries := rip.Body.num_entries
 	for i := 0; i < int(num_entries); i++ {
 		entry := rip.Body.entries[i]
-		newCost := entry.cost + 1
-		// fmt.Printf("newCost is %v\n", newCost)
+		// Expiration time
 		destIP := ipv4Num2str(entry.address)
+		// fmt.Printf("newCost is %v\n", newCost)
 		// fmt.Printf("Receive a dest addr %v\n", destAddr)
+		node.RemoteDest2ExTime[destIP] = time.Now().Add(12 * time.Second)
+		go node.SendExTimeCLI(destIP)
+		// Min Cost
 		// if the dest addr exists in destAddr2Cost and new cost is bigger, ignore
+		newCost := entry.cost + 1
 		if cost, ok := node.RemoteDestIP2Cost[destIP]; ok && newCost >= cost {
 			continue
 		}
@@ -74,5 +79,22 @@ func (node *Node) HandleRIP(bytes []byte) {
 		// update the metadata
 		node.RemoteDestIP2Cost[destIP] = newCost
 		node.RemoteDestIP2SrcIP[destIP] = nextAddr
+	}
+}
+
+func (node *Node) SendExTimeCLI(destIP string) {
+	// sleep 13 second and check whether the time expires
+	time.Sleep(13 * time.Second)
+	cli := NewCLI(RouteEx, 0, []byte{}, destIP)
+	node.NodeCLIChan <- cli
+}
+
+// Handle Expired Route
+func (node *Node) HandleRouteEx(destIP string) {
+	if time.Now().After(node.RemoteDest2ExTime[destIP]) {
+		delete(node.RemoteDest2ExTime, destIP)
+		delete(node.DestIP2Route, destIP)
+		delete(node.RemoteDestIP2Cost, destIP)
+		delete(node.RemoteDestIP2SrcIP, destIP)
 	}
 }
