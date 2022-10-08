@@ -2,6 +2,7 @@ package link
 
 import (
 	"fmt"
+	"log"
 	"net"
 )
 
@@ -23,7 +24,16 @@ func (li *LinkInterface) Make(id uint8, udpIp, udpPortRemote, ipLocal, ipRemote 
 	if li.IPLocal == "" {
 		return
 	}
-	li.OpenRemoteLink()
+	// Setup RemoteConn
+	addr, err := net.ResolveUDPAddr("udp", li.MACRemote)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	// fmt.Println(li.Addr, li.IpLocal, li.IpRemote)
+	li.RemoteConn, err = net.DialUDP("udp", nil, addr)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	li.Status = "up"
 }
 

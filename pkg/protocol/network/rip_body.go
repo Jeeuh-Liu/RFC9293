@@ -16,7 +16,7 @@ type RIPBody struct {
 
 func (node *Node) NewRIPBody(IPRemote string) *RIPBody {
 	entries := []Entry{}
-	for _, route := range node.Routes {
+	for _, route := range node.DestIP2Route {
 		// if route.next == src of route.dest -> ignore this route entry
 		if srcIP, ok := node.RemoteDestIP2SrcIP[route.Dest]; ok && srcIP == IPRemote {
 			continue

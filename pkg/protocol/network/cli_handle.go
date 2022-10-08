@@ -7,6 +7,7 @@ import (
 )
 
 // Handle CLI
+// ***********************************************************************************
 func (node *Node) PrintInterfaces() {
 	fmt.Println("id    state        local        remote        port")
 	for id, li := range node.ID2Interface {
@@ -32,12 +33,13 @@ func (node *Node) Quit() {
 
 func (node *Node) PrintRoutes() {
 	fmt.Println("    dest        	next        cost")
-	for _, r := range node.Routes {
+	for _, r := range node.DestIP2Route {
 		fmt.Printf("    %v         %v         %v\n", r.Dest, r.Next, r.Cost)
 	}
 }
 
 // BroadcastRIP
+// ***********************************************************************************
 func (node *Node) BroadcastRIP() {
 	// fmt.Println("Try to broadcast RIP")
 	for _, li := range node.ID2Interface {
@@ -48,6 +50,7 @@ func (node *Node) BroadcastRIP() {
 }
 
 // HandleRIP
+// ***********************************************************************************
 func (node *Node) HandleRIP(bytes []byte) {
 	rip := UnmarshalRIP(bytes)
 	num_entries := rip.Body.num_entries
@@ -55,20 +58,21 @@ func (node *Node) HandleRIP(bytes []byte) {
 		entry := rip.Body.entries[i]
 		newCost := entry.cost + 1
 		// fmt.Printf("newCost is %v\n", newCost)
-		destAddr := ipv4Num2str(entry.address)
+		destIP := ipv4Num2str(entry.address)
 		// fmt.Printf("Receive a dest addr %v\n", destAddr)
 		// if the dest addr exists in destAddr2Cost and new cost is bigger, ignore
-		if cost, ok := node.RemoteDestIP2Cost[destAddr]; ok && newCost >= cost {
+		if cost, ok := node.RemoteDestIP2Cost[destIP]; ok && newCost >= cost {
 			continue
 		}
 		fmt.Println(rip.Header.Src)
 		nextAddr := netIP2str(rip.Header.Src)
 		// fmt.Printf("nextAddr is %v\n", nextAddr)
-		newRoute := NewRoute(destAddr, nextAddr, newCost)
+		newRoute := NewRoute(destIP, nextAddr, newCost)
 		// fmt.Println(newRoute)
-		node.Routes = append(node.Routes, newRoute)
+		// node.Routes = append(node.Routes, newRoute)
+		node.DestIP2Route[destIP] = newRoute
 		// update the metadata
-		node.RemoteDestIP2Cost[destAddr] = newCost
-		node.RemoteDestIP2SrcIP[destAddr] = nextAddr
+		node.RemoteDestIP2Cost[destIP] = newCost
+		node.RemoteDestIP2SrcIP[destIP] = nextAddr
 	}
 }

@@ -42,5 +42,3 @@ func UnmarshalRIP(bytes []byte) RIPPacket {
 	}
 	return rip
 }
-
-// ************************************************************************

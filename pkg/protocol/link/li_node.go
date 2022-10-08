@@ -11,7 +11,7 @@ func (li *LinkInterface) SendRIP(bytes []byte) {
 	if li.Status != "up" {
 		return
 	}
-	fmt.Printf("Link try to send a RIP to %v\n", li.MACRemote)
+	// fmt.Printf("Link try to send a RIP to %v\n", li.MACRemote)
 	li.RemoteConn.Write(bytes)
 }
 
@@ -30,6 +30,7 @@ func (li *LinkInterface) OpenRemoteLink() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	li.Status = "up"
 	fmt.Printf("interface %v is now enabled, Dial to udp %v\n", li.ID, li.MACRemote)
 }
 

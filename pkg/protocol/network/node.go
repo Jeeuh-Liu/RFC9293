@@ -19,7 +19,7 @@ type Node struct {
 	ID2Interface map[uint8]*link.LinkInterface
 	NodeCLIChan  chan *CLI
 	// Routers
-	Routes []Route
+	DestIP2Route map[string]Route
 	// Local MAC addr and UDPConn
 	MACLocal  string
 	LocalConn *net.UDPConn
@@ -67,14 +67,16 @@ func (node *Node) Make(args []string) {
 	}
 	// fmt.Println(node)
 	// Initialize Routes: each interface to itself
-	node.Routes = []Route{}
+	// node.Routes = []Route{}
+	node.DestIP2Route = map[string]Route{}
 	for _, li := range node.ID2Interface {
 		route := Route{
 			Dest: li.IPLocal,
 			Next: li.IPLocal,
 			Cost: 0,
 		}
-		node.Routes = append(node.Routes, route)
+		node.DestIP2Route[route.Dest] = route
+		// node.Routes = append(node.Routes, route)
 	}
 	// initialize map remote2cost
 	node.RemoteDestIP2Cost = map[string]uint32{}
