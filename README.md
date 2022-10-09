@@ -27,6 +27,10 @@ reference node + inx
 ./tools/ref_node ./nets/routeAggregation/tree/A.lnx
 ./tools/ref_node ./nets/routeAggregation/tree/B.lnx
 ./tools/ref_node ./nets/routeAggregation/tree/C.lnx
+
+./node ./nets/routeAggregation/tree/A.lnx
+./node ./nets/routeAggregation/tree/B.lnx
+./node ./nets/routeAggregation/tree/C.lnx
 ```
 
 print all link interfaces

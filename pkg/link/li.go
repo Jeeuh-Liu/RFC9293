@@ -8,37 +8,36 @@ import (
 
 type LinkInterface struct {
 	ID        uint8
-	MACLocal  string
-	MACRemote string
+	MACLocal  *net.UDPAddr
+	MACRemote *net.UDPAddr
 	IPLocal   string
 	IPRemote  string
 	Status    string
 	// we use RemoteConn to send data to remote machine
-	RemoteConn *net.UDPConn
+	LinkConn *net.UDPConn
 }
 
-func (li *LinkInterface) Make(udpIp, udpPortRemote, ipLocal, ipRemote string, id uint8) {
+func (li *LinkInterface) Make(udpIp, udpPortRemote, ipLocal, ipRemote string, id uint8, MACLocal string) {
 	li.ID = id
-	li.MACRemote = ToIPColonAddr(udpIp, udpPortRemote)
 	li.IPLocal = ipLocal
 	li.IPRemote = ipRemote
 	if li.IPLocal == "" {
 		return
 	}
 	// LocalAddr
-	// ipPort := strings.Split(MACLocal, ":")
-	// port, _ := strconv.Atoi(ipPort[1])
-	// localAddr := net.UDPAddr{
-	// 	IP:   net.ParseIP(ipPort[0]),
-	// 	Port: port,
-	// }
 	// Setup RemoteConn
-	remoteAddr, err := net.ResolveUDPAddr("udp", li.MACRemote)
+	remoteAddr, err := net.ResolveUDPAddr("udp", ToIPColonAddr(udpIp, udpPortRemote))
+	li.MACRemote = remoteAddr
+	if err != nil {
+		log.Fatalln(err)
+	}
+	LocalAddr, err := net.ResolveUDPAddr("udp", MACLocal)
+	li.MACLocal = LocalAddr
 	if err != nil {
 		log.Fatalln(err)
 	}
 	// fmt.Println(li.Addr, li.IpLocal, li.IpRemote)
-	li.RemoteConn, err = net.DialUDP("udp", nil, remoteAddr)
+	li.LinkConn, err = net.ListenUDP("udp", li.MACLocal)
 	if err != nil {
 		log.Fatalln(err)
 	}

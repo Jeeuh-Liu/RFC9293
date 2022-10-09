@@ -12,7 +12,7 @@ import (
 func (node *Node) PrintInterfaces() {
 	fmt.Println("id    state        local        remote        port")
 	for id, li := range node.ID2Interface {
-		port := strings.Split(li.MACRemote, ":")[1]
+		port := strings.Split(node.MACLocal, ":")[1]
 		fmt.Printf("%v      %v         %v     %v      %v\n", id, li.Status, li.IPLocal, li.IPRemote, port)
 	}
 }

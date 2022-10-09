@@ -15,6 +15,11 @@ func (node *Node) NewRIPResp(IPLocal, IPRemote string) *RIPResp {
 	rip := &RIPResp{}
 	rip.Body = node.NewRIPRespBody(IPRemote)
 	rip.Header = node.NewRIPRespHeader(IPLocal, IPRemote, len(rip.Body.Marshal()))
+	headerBytes, err := rip.Header.Marshal()
+	if err != nil {
+		log.Fatalln("Error marshalling header:  ", err)
+	}
+	rip.Header.Checksum = int(ComputeChecksum(headerBytes))
 	return rip
 }
 

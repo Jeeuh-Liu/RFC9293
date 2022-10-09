@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
 	"tcpip/pkg/link"
 	"time"
 )
@@ -16,7 +15,7 @@ import (
 // The driver program
 
 type Node struct {
-	Mu           sync.Mutex
+	Port         string
 	ID2Interface map[uint8]*link.LinkInterface
 	NodeCLIChan  chan *CLI
 	// Routers
@@ -64,7 +63,7 @@ func (node *Node) Make(args []string) {
 		}
 		// elements: udpIp, udpPortRemote, ipLocal, ipRemote
 		//li.Make(udpIp, udpPortRemote, ipLocal, ipRemote, id, udpPortLocal)
-		li.Make(eles[0], eles[1], eles[2], eles[3], id)
+		li.Make(eles[0], eles[1], eles[2], eles[3], id, node.MACLocal)
 		fmt.Printf("%v: %v\n", id, eles[2])
 		node.ID2Interface[id] = li
 		id++
@@ -88,7 +87,7 @@ func (node *Node) Make(args []string) {
 	// initialize map remoteDest2exTime
 	node.RemoteDest2ExTime = map[string]time.Time{}
 	// Receive UDP
-	go node.ServeLocalLink()
+	// go node.ServeLocalLink()
 	// Receive CLI
 	go node.ScanClI()
 	// Broadcast RIP Request once
