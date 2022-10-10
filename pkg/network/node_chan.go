@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"tcpip/pkg/proto"
+	"time"
 )
 
 // ScanCLI
@@ -22,12 +24,12 @@ func (node *Node) ScanClI() {
 			line := scanner.Text()
 			if len(line) >= 2 && line[:2] == "li" {
 				if len(line) == 2 {
-					cli := NewCLI(LI, 0, []byte{}, "")
+					cli := proto.NewCLI(proto.LI, 0, []byte{}, "")
 					node.NodeCLIChan <- cli
 				}
 			} else if len(line) >= 2 && line[:2] == "lr" {
 				if len(line) == 2 {
-					cli := NewCLI(LR, 0, []byte{}, "")
+					cli := proto.NewCLI(proto.LR, 0, []byte{}, "")
 					node.NodeCLIChan <- cli
 				}
 
@@ -43,7 +45,7 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// open link
-				cli := NewCLI(uint8(SetUpT), uint8(id), []byte{}, "")
+				cli := proto.NewCLI(uint8(proto.SetUpT), uint8(id), []byte{}, "")
 				node.NodeCLIChan <- cli
 			} else if len(line) >= 4 && len(strings.Split(line, " ")) == 2 && line[:4] == "down" {
 				cmds := strings.Split(line, " ")
@@ -57,10 +59,10 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// close link
-				cli := NewCLI(uint8(SetDownT), uint8(id), []byte{}, "")
+				cli := proto.NewCLI(uint8(proto.SetDownT), uint8(id), []byte{}, "")
 				node.NodeCLIChan <- cli
 			} else if line == "q" {
-				cli := NewCLI(Quit, 0, []byte{}, "")
+				cli := proto.NewCLI(proto.Quit, 0, []byte{}, "")
 				node.NodeCLIChan <- cli
 			} else {
 				fmt.Printf("Invalid command\n> ")
@@ -76,29 +78,53 @@ func (node *Node) HandleCLI() {
 	for {
 		cli := <-node.NodeCLIChan
 		switch cli.CLIType {
-		case LI:
-			node.PrintInterfaces()
+		case proto.LI:
+			node.HandlePrintInterfaces()
 			fmt.Printf("> ")
-		case SetUpT:
-			node.SetUp(cli.ID)
+		case proto.SetUpT:
+			node.HandleSetUp(cli.ID)
 			fmt.Printf("> ")
-		case SetDownT:
-			node.SetDown(cli.ID)
+		case proto.SetDownT:
+			node.HandleSetDown(cli.ID)
 			fmt.Printf("> ")
-		case Quit:
-			node.Quit()
+		case proto.Quit:
+			node.HandleQuit()
 			fmt.Printf("> ")
-		case LR:
-			node.PrintRoutes()
+		case proto.LR:
+			node.HandlePrintRoutes()
 			fmt.Printf("> ")
-		case RIPRespBroadcast:
+		case proto.TypeBroadcastRIPResp:
 			node.HandleBroadcastRIPResp()
-		case RIPReqBroadcast:
+		case proto.TypeBroadcastRIPReq:
 			node.HandleBroadcastRIPReq()
-		case RIPRespHandle:
+		case proto.TypeHandlePacket:
+			node.HandlePacket(cli.Bytes)
+		case proto.TypeHandleRIPResp:
 			node.HandleRIPResp(cli.Bytes)
-		case RouteEx:
+		case proto.TypeRouteEx:
 			node.HandleRouteEx(cli.DestIP)
 		}
 	}
+}
+
+// Broadcast RIP through LinkInterface
+func (node *Node) RIPRespDaemon() {
+	for {
+		cli := proto.NewCLI(proto.TypeBroadcastRIPResp, 0, []byte{}, "")
+		node.NodeCLIChan <- cli
+		time.Sleep(5 * time.Second)
+	}
+}
+
+func (node *Node) RIPReqDaemon() {
+	cli := proto.NewCLI(proto.TypeBroadcastRIPReq, 0, []byte{}, "")
+	node.NodeCLIChan <- cli
+}
+
+// Route Ex timeout
+func (node *Node) SendExTimeCLI(destIP string) {
+	// sleep 13 second and check whether the time expires
+	time.Sleep(13 * time.Second)
+	cli := proto.NewCLI(proto.TypeRouteEx, 0, []byte{}, destIP)
+	node.NodeCLIChan <- cli
 }

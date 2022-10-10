@@ -77,6 +77,16 @@ send 10.0.0.10 0 "Hello from A"
 
 
 
+kill process
+
+```
+sudo install lsof
+
+sudo lsof -i -P -n | grep 17001
+```
+
+
+
 # Packet
 
 ## Send
@@ -224,6 +234,22 @@ In terms of Expiration Goroutine:
 
 ### Triggered updates
 
+|             |                |                                                              |
+| ----------- | -------------- | ------------------------------------------------------------ |
+| DestIP2Cost | map[string]int | To avoid trigger updates and Split Horizon with Poisoned Reverse |
+
+Sender:
+
 After handling a RIP response, if the cost of Remote dest IP addr has changed:
 
 - broadcast the updated route entry in RIP responses to other interfaces
+
+
+
+Receive:
+
+After receiving a RIP response
+
+- Check whether destIP of this RIP response is srcIP of one interface
+  - if yes, ignroe
+  - continue other steps 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"tcpip/pkg/proto"
 )
 
 // Handle commands to open and close of link
@@ -37,6 +38,8 @@ func (li *LinkInterface) CloseRemoteLink() {
 	fmt.Printf("interface %v is now disabled\n", li.ID)
 }
 
+// *****************************************************************************
+// Read bytes from link
 func (li *LinkInterface) ServeLink() {
 	for {
 		bytes := make([]byte, 1400)
@@ -44,33 +47,36 @@ func (li *LinkInterface) ServeLink() {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		fmt.Printf("Receive %v bytes\n", bnum)
+		// fmt.Printf("Receive %v bytes\n", bnum)
 
 		// fmt.Printf("Receive bytes from %v\n", sourceAddr.String())
 		// if the sourceAddr does not belong to this link, abandon it directly
-		if sourceAddr.String() != li.MACRemote {
-			fmt.Printf("%v Not match %v", sourceAddr.String(), li.MACRemote)
+		destAddr := sourceAddr.String()
+		if destAddr != li.MACRemote {
+			fmt.Printf("%v Not match %v", destAddr, li.MACRemote)
 			continue
 		}
 
-		// rip := UnmarshalRIPResp(bytes)
-		// if err != nil {
-		// 	log.Fatalln(err)
-		// }
-		// switch rip.Header.Protocol {
-		// case 200:
-		// 	switch rip.Body.Command {
-		// 	case 1:
-		// 		fmt.Println("Receive a RIP Request")
-		// 		// CLI := NewCLI(RIPReqHandle, 0, bytes, ")
-		// 		// node.NodeCLIChan <- LI
-		// 	case 2:
-		// 		fmt.Println("Receive a RIP Response")
-		// 		// CLI := NewCLI(RIPRespHandle, 0, bytes, "")
-		// 		// node.NodeCLIChan <- CLI
-		// 	}
-		// case 0:
-		// 	// fmt.Println("Receive a TEST")
-		// }
+		// send a CLI to handle packet
+		cli := proto.NewCLI(proto.TypeHandlePacket, 0, bytes[:bnum], destAddr)
+		li.NodeChan <- cli
 	}
+}
+
+// ****************************************************************************
+// Send bytes through link
+func (li *LinkInterface) SendPacket(packetBytes []byte) {
+	if li.Status != "up" {
+		return
+	}
+	// fmt.Printf("Link try to send a RIP to %v\n", li.MACRemote)
+	remoteAddr, err := net.ResolveUDPAddr("udp", li.MACRemote)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	_, err = li.LinkConn.WriteToUDP(packetBytes, remoteAddr)
+	if err != nil {
+		log.Fatalln("sendRIP", err)
+	}
+	// fmt.Printf("Send %v bytes\n", bnum)
 }

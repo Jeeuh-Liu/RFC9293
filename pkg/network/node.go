@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"tcpip/pkg/link"
+	"tcpip/pkg/proto"
 	"time"
 )
 
@@ -17,7 +18,7 @@ import (
 type Node struct {
 	Port         string
 	ID2Interface map[uint8]*link.LinkInterface
-	NodeCLIChan  chan *CLI
+	NodeCLIChan  chan *proto.CLI
 	// Routers
 	DestIP2Route map[string]Route
 	// Local MAC addr and UDPConn
@@ -25,6 +26,7 @@ type Node struct {
 	LocalConn *net.UDPConn
 	// RIP metadata
 	// check min_cost
+	LocalIPSet        map[string]bool
 	RemoteDestIP2Cost map[string]uint32
 	// check Split Horizon with Poisoned Reverse
 	RemoteDestIP2SrcIP map[string]string
@@ -33,8 +35,8 @@ type Node struct {
 }
 
 func (node *Node) Make(args []string) {
-	// Initialize NodeCLIChan
-	node.NodeCLIChan = make(chan *CLI)
+	// Initialize NodeCLIChan, notice that length should > 1
+	node.NodeCLIChan = make(chan *proto.CLI)
 	// Initialize ID2Interface
 	node.ID2Interface = make(map[uint8]*link.LinkInterface)
 	inx := args[1]
@@ -64,13 +66,15 @@ func (node *Node) Make(args []string) {
 		}
 		// elements: udpIp, udpPortRemote, ipLocal, ipRemote
 		//li.Make(udpIp, udpPortRemote, ipLocal, ipRemote, id, udpPortLocal)
-		li.Make(eles[0], eles[1], eles[2], eles[3], id, udpPortLocal)
+		li.Make(eles[0], eles[1], eles[2], eles[3], id, udpPortLocal, node.NodeCLIChan)
 		fmt.Printf("%v: %v\n", id, eles[2])
 		node.ID2Interface[id] = li
 		id++
 	}
 	// fmt.Println(node)
 	// Initialize Routes: each interface to itself
+	// initialize local IP set
+	node.LocalIPSet = map[string]bool{}
 	node.DestIP2Route = map[string]Route{}
 	for _, li := range node.ID2Interface {
 		route := Route{
@@ -79,7 +83,7 @@ func (node *Node) Make(args []string) {
 			Cost: 0,
 		}
 		node.DestIP2Route[route.Dest] = route
-		// node.Routes = append(node.Routes, route)
+		node.LocalIPSet[li.IPLocal] = true
 	}
 	// initialize map remote2cost
 	node.RemoteDestIP2Cost = map[string]uint32{}

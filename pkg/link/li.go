@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"tcpip/pkg/proto"
 )
 
 type LinkInterface struct {
@@ -15,14 +16,18 @@ type LinkInterface struct {
 	Status    string
 	// we use RemoteConn to send data to remote machine
 	LinkConn *net.UDPConn
+	// we use this channel to send packet back to node
+	NodeChan chan *proto.CLI
 }
 
-func (li *LinkInterface) Make(udpIp, udpPortRemote, ipLocal, ipRemote string, id uint8, udpPortLocal string) {
+func (li *LinkInterface) Make(udpIp, udpPortRemote, ipLocal, ipRemote string, id uint8, udpPortLocal string, nodeChan chan *proto.CLI) {
 	li.ID = id
 	li.MACLocal = udpIp + ":" + udpPortLocal
 	li.MACRemote = udpIp + ":" + udpPortRemote
 	li.IPLocal = ipLocal
 	li.IPRemote = ipRemote
+	// Communication between layer and network
+	li.NodeChan = nodeChan
 	if li.IPLocal == "" {
 		return
 	}
@@ -38,7 +43,7 @@ func (li *LinkInterface) Make(udpIp, udpPortRemote, ipLocal, ipRemote string, id
 	}
 	li.MACRemote = remoteAddr.String()
 	li.MACLocal = localAddr.String()
-	// fmt.Println(li.MACLocal, li.MACRemote)
+	fmt.Println(li.MACLocal, li.MACRemote)
 	linkConn, err := net.ListenUDP("udp", localAddr)
 	li.LinkConn = linkConn
 	if err != nil {
