@@ -7,33 +7,26 @@ import (
 	"tcpip/pkg/proto"
 )
 
-// Handle commands to open and close of link
+// Open and close of link
+// *****************************************************************************
 func (li *LinkInterface) OpenRemoteLink() {
+	li.Mu.Lock()
+	defer li.Mu.Unlock()
 	if li.Status == "up" {
 		fmt.Printf("interface %v is already up\n", li.ID)
 		return
 	}
-	// fmt.Println(li.Addr, li.IpLocal, li.IpRemote)
-	localAddr, err := net.ResolveUDPAddr("udp", li.MACLocal)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	linkConn, err := net.ListenUDP("udp", localAddr)
-	li.LinkConn = linkConn
-	if err != nil {
-		log.Fatalln("Open LinkConn", err)
-	}
 	li.Status = "up"
 	fmt.Printf("interface %v is now enabled, Dial to udp %v\n", li.ID, li.MACRemote)
-	go li.ServeLink()
 }
 
 func (li *LinkInterface) CloseRemoteLink() {
-	if li.Status == "down" {
+	li.Mu.Lock()
+	defer li.Mu.Unlock()
+	if li.Status == "dn" {
 		fmt.Printf("interface %v is already down\n", li.ID)
 		return
 	}
-	li.LinkConn.Close()
 	li.Status = "dn"
 	fmt.Printf("interface %v is now disabled\n", li.ID)
 }
@@ -45,31 +38,30 @@ func (li *LinkInterface) ServeLink() {
 		bytes := make([]byte, 1400)
 		bnum, sourceAddr, err := li.LinkConn.ReadFromUDP(bytes)
 		if err != nil {
-			log.Fatalln(err)
+			// if the connection close, stop this goroutine
+			// fmt.Println("The linkConn is closed")
+			return
 		}
-		// fmt.Printf("Receive %v bytes\n", bnum)
-
 		// fmt.Printf("Receive bytes from %v\n", sourceAddr.String())
 		// if the sourceAddr does not belong to this link, abandon it directly
 		destAddr := sourceAddr.String()
-		if destAddr != li.MACRemote {
-			fmt.Printf("%v Not match %v", destAddr, li.MACRemote)
-			continue
-		}
-
 		// send a CLI to handle packet
 		cli := proto.NewCLI(proto.TypeHandlePacket, 0, bytes[:bnum], destAddr)
 		li.NodeChan <- cli
 	}
 }
 
+func (li *LinkInterface) IsUp() bool {
+	li.Mu.Lock()
+	defer li.Mu.Unlock()
+	return li.Status == "up"
+}
+
 // ****************************************************************************
 // Send bytes through link
 func (li *LinkInterface) SendPacket(packetBytes []byte) {
-	if li.Status != "up" {
-		return
-	}
-	// fmt.Printf("Link try to send a RIP to %v\n", li.MACRemote)
+	// fmt.Printf("Link try to send a RIP to %v through port %v\n", li.MACRemote, li.MACRemote)
+	// fmt.Printf("Link whose remote port is %v 's status is %v\n", li.MACRemote, li.Status)
 	remoteAddr, err := net.ResolveUDPAddr("udp", li.MACRemote)
 	if err != nil {
 		log.Fatalln(err)

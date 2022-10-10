@@ -98,7 +98,7 @@ func (node *Node) HandleCLI() {
 		case proto.TypeBroadcastRIPReq:
 			node.HandleBroadcastRIPReq()
 		case proto.TypeHandlePacket:
-			node.HandlePacket(cli.Bytes)
+			node.HandlePacket(cli.Bytes, cli.DestIP)
 		case proto.TypeHandleRIPResp:
 			node.HandleRIPResp(cli.Bytes)
 		case proto.TypeRouteEx:
@@ -123,8 +123,8 @@ func (node *Node) RIPReqDaemon() {
 
 // Route Ex timeout
 func (node *Node) SendExTimeCLI(destIP string) {
-	// sleep 13 second and check whether the time expires
-	time.Sleep(13 * time.Second)
+	// sleep 12 second and check whether the time expires
+	time.Sleep(12 * time.Second)
 	cli := proto.NewCLI(proto.TypeRouteEx, 0, []byte{}, destIP)
 	node.NodeCLIChan <- cli
 }

@@ -87,9 +87,43 @@ sudo lsof -i -P -n | grep 17001
 
 
 
+cound lines in a dir
+
+```shell
+git ls-files | xargs cat | wc -l
+```
+
+
+
+# Link
+
+## Close
+
+if a linkInterace is down, the node should not receive any packets from it.
+
+node -> move the disabled route from (1) LocalIPSet (2) DestIP2Route map[string]Route
+
+​		-> move all routes whose next IP is the remote IP addr of the disabled route
+
+Link -> change status
+
+
+
+## Open
+
+if a linkInterace is up, the node should not receive any packets from it.
+
+node -> add the enabled route from (1) LocalIPSet (2) DestIP2Route map[**string**]Route (3) all metadata of remoteDestIP
+
+Link -> change status, start if **serveLinkli**
+
+
+
 # Packet
 
 ## Send
+
+
 
 
 
@@ -233,10 +267,6 @@ In terms of Expiration Goroutine:
 
 
 ### Triggered updates
-
-|             |                |                                                              |
-| ----------- | -------------- | ------------------------------------------------------------ |
-| DestIP2Cost | map[string]int | To avoid trigger updates and Split Horizon with Poisoned Reverse |
 
 Sender:
 

@@ -15,7 +15,7 @@ const (
 	TypeHandlePacket = uint8(7)
 	// Handle RIP Resp
 	TypeHandleRIPResp = uint8(8)
-	// Expiration
+	// Remote Route Expiration
 	TypeRouteEx = uint8(9)
 )
 

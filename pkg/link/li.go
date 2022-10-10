@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"tcpip/pkg/proto"
 )
 
 type LinkInterface struct {
+	Mu        sync.Mutex
 	ID        uint8
 	MACLocal  string
 	MACRemote string
@@ -20,7 +22,8 @@ type LinkInterface struct {
 	NodeChan chan *proto.CLI
 }
 
-func (li *LinkInterface) Make(udpIp, udpPortRemote, ipLocal, ipRemote string, id uint8, udpPortLocal string, nodeChan chan *proto.CLI) {
+func (li *LinkInterface) Make(udpIp, udpPortRemote, ipLocal, ipRemote string,
+	id uint8, udpPortLocal string, linkConn *net.UDPConn, nodeChan chan *proto.CLI) {
 	li.ID = id
 	li.MACLocal = udpIp + ":" + udpPortLocal
 	li.MACRemote = udpIp + ":" + udpPortRemote
@@ -43,8 +46,7 @@ func (li *LinkInterface) Make(udpIp, udpPortRemote, ipLocal, ipRemote string, id
 	}
 	li.MACRemote = remoteAddr.String()
 	li.MACLocal = localAddr.String()
-	fmt.Println(li.MACLocal, li.MACRemote)
-	linkConn, err := net.ListenUDP("udp", localAddr)
+	// fmt.Println(li.MACLocal, li.MACRemote)
 	li.LinkConn = linkConn
 	if err != nil {
 		log.Fatalln("Open LinkConn", err)

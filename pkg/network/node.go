@@ -16,13 +16,11 @@ import (
 // The driver program
 
 type Node struct {
-	Port         string
 	ID2Interface map[uint8]*link.LinkInterface
 	NodeCLIChan  chan *proto.CLI
 	// Routers
 	DestIP2Route map[string]Route
 	// Local MAC addr and UDPConn
-	MACLocal  string
 	LocalConn *net.UDPConn
 	// RIP metadata
 	// check min_cost
@@ -35,7 +33,7 @@ type Node struct {
 }
 
 func (node *Node) Make(args []string) {
-	// Initialize NodeCLIChan, notice that length should > 1
+	// Initialize NodeCLIChan, we can set to bigger to avoid some deadlock
 	node.NodeCLIChan = make(chan *proto.CLI)
 	// Initialize ID2Interface
 	node.ID2Interface = make(map[uint8]*link.LinkInterface)
@@ -47,7 +45,23 @@ func (node *Node) Make(args []string) {
 	r := bufio.NewReader(f)
 
 	id := uint8(0)
+
 	var udpPortLocal string
+	// Open linkConn with first line
+	bytes, _, err := r.ReadLine()
+	if err != nil {
+		log.Fatalln("ReadFirstLine", err)
+	}
+	eles := strings.Split(string(bytes), " ")
+	localAddr, err := net.ResolveUDPAddr("udp", ToIPColonAddr(eles[0], eles[1]))
+	if err != nil {
+		log.Fatalln("Resolve UDPAddr", err)
+	}
+	linkConn, err := net.ListenUDP("udp", localAddr)
+	if err != nil {
+		log.Fatalln("ListenUDP", err)
+	}
+	// Initialize link Interface
 	for {
 		bytes, _, err := r.ReadLine()
 		if err != nil {
@@ -58,15 +72,9 @@ func (node *Node) Make(args []string) {
 		}
 		eles := strings.Split(string(bytes), " ")
 		li := &link.LinkInterface{}
-		if len(eles) == 2 {
-			udpPortLocal = eles[1]
-			node.MACLocal = ToIPColonAddr(eles[0], udpPortLocal)
-			// fmt.Println("MACLocal is", node.MACLocal)
-			continue
-		}
 		// elements: udpIp, udpPortRemote, ipLocal, ipRemote
 		//li.Make(udpIp, udpPortRemote, ipLocal, ipRemote, id, udpPortLocal)
-		li.Make(eles[0], eles[1], eles[2], eles[3], id, udpPortLocal, node.NodeCLIChan)
+		li.Make(eles[0], eles[1], eles[2], eles[3], id, udpPortLocal, linkConn, node.NodeCLIChan)
 		fmt.Printf("%v: %v\n", id, eles[2])
 		node.ID2Interface[id] = li
 		id++
