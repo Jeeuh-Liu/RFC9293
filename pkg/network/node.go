@@ -45,6 +45,7 @@ func (node *Node) Make(args []string) {
 	r := bufio.NewReader(f)
 
 	id := uint8(0)
+	var udpPortLocal string
 	for {
 		bytes, _, err := r.ReadLine()
 		if err != nil {
@@ -56,14 +57,14 @@ func (node *Node) Make(args []string) {
 		eles := strings.Split(string(bytes), " ")
 		li := &link.LinkInterface{}
 		if len(eles) == 2 {
-			udpPortLocal := eles[1]
+			udpPortLocal = eles[1]
 			node.MACLocal = ToIPColonAddr(eles[0], udpPortLocal)
 			// fmt.Println("MACLocal is", node.MACLocal)
 			continue
 		}
 		// elements: udpIp, udpPortRemote, ipLocal, ipRemote
 		//li.Make(udpIp, udpPortRemote, ipLocal, ipRemote, id, udpPortLocal)
-		li.Make(eles[0], eles[1], eles[2], eles[3], id, node.MACLocal)
+		li.Make(eles[0], eles[1], eles[2], eles[3], id, udpPortLocal)
 		fmt.Printf("%v: %v\n", id, eles[2])
 		node.ID2Interface[id] = li
 		id++
@@ -86,8 +87,6 @@ func (node *Node) Make(args []string) {
 	node.RemoteDestIP2SrcIP = map[string]string{}
 	// initialize map remoteDest2exTime
 	node.RemoteDest2ExTime = map[string]time.Time{}
-	// Receive UDP
-	// go node.ServeLocalLink()
 	// Receive CLI
 	go node.ScanClI()
 	// Broadcast RIP Request once

@@ -42,20 +42,20 @@ func (node *Node) PrintRoutes() {
 // BroadcastRIP
 // ***********************************************************************************
 func (node *Node) HandleBroadcastRIPResp() {
-	// fmt.Println("Try to broadcast RIP")
+	fmt.Println("Try to broadcast RIP Resp")
 	for _, li := range node.ID2Interface {
-		rip := node.NewRIPResp(li.IPLocal, li.IPRemote)
+		rip := node.NewRIPResp(li)
 		bytes := rip.Marshal()
-		li.SendRIP(bytes)
+		li.SendPacket(bytes)
 	}
 }
 
 func (node *Node) HandleBroadcastRIPReq() {
-	// fmt.Println("Try to broadcast RIP")
+	fmt.Println("Try to broadcast RIP Req")
 	for _, li := range node.ID2Interface {
-		rip := node.NewRIPReq(li.IPLocal, li.IPRemote)
+		rip := node.NewRIPReq(li)
 		bytes := rip.Marshal()
-		li.SendRIP(bytes)
+		li.SendPacket(bytes)
 	}
 }
 
@@ -83,7 +83,7 @@ func (node *Node) HandleRIPResp(bytes []byte) {
 		if cost, ok := node.RemoteDestIP2Cost[destIP]; ok && newCost >= cost {
 			continue
 		}
-		nextAddr := netIP2str(rip.Header.Src)
+		nextAddr := rip.Header.Src.String()
 		// fmt.Printf("nextAddr is %v\n", nextAddr)
 		newRoute := NewRoute(destIP, nextAddr, newCost)
 		// fmt.Println(newRoute)

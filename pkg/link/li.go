@@ -8,8 +8,8 @@ import (
 
 type LinkInterface struct {
 	ID        uint8
-	MACLocal  *net.UDPAddr
-	MACRemote *net.UDPAddr
+	MACLocal  string
+	MACRemote string
 	IPLocal   string
 	IPRemote  string
 	Status    string
@@ -17,8 +17,10 @@ type LinkInterface struct {
 	LinkConn *net.UDPConn
 }
 
-func (li *LinkInterface) Make(udpIp, udpPortRemote, ipLocal, ipRemote string, id uint8, MACLocal string) {
+func (li *LinkInterface) Make(udpIp, udpPortRemote, ipLocal, ipRemote string, id uint8, udpPortLocal string) {
 	li.ID = id
+	li.MACLocal = udpIp + ":" + udpPortLocal
+	li.MACRemote = udpIp + ":" + udpPortRemote
 	li.IPLocal = ipLocal
 	li.IPRemote = ipRemote
 	if li.IPLocal == "" {
@@ -26,22 +28,24 @@ func (li *LinkInterface) Make(udpIp, udpPortRemote, ipLocal, ipRemote string, id
 	}
 	// LocalAddr
 	// Setup RemoteConn
-	remoteAddr, err := net.ResolveUDPAddr("udp", ToIPColonAddr(udpIp, udpPortRemote))
-	li.MACRemote = remoteAddr
+	remoteAddr, err := net.ResolveUDPAddr("udp", li.MACRemote)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	LocalAddr, err := net.ResolveUDPAddr("udp", MACLocal)
-	li.MACLocal = LocalAddr
+	localAddr, err := net.ResolveUDPAddr("udp", li.MACLocal)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	// fmt.Println(li.Addr, li.IpLocal, li.IpRemote)
-	li.LinkConn, err = net.ListenUDP("udp", li.MACLocal)
+	li.MACRemote = remoteAddr.String()
+	li.MACLocal = localAddr.String()
+	// fmt.Println(li.MACLocal, li.MACRemote)
+	linkConn, err := net.ListenUDP("udp", localAddr)
+	li.LinkConn = linkConn
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("Open LinkConn", err)
 	}
 	li.Status = "up"
+	go li.ServeLink()
 }
 
 func ToIPColonAddr(udpIp, udpPort string) string {
