@@ -130,8 +130,8 @@ func UnmarshalRIPBody(bytes []byte) *RIPBody {
 }
 
 func ComputeChecksum(b []byte) uint16 {
+	// fmt.Println("Send", b)
 	checksum := header.Checksum(b, 0)
-
 	// Invert the checksum value.  Why is this necessary?
 	// The checksum function in the library we're using seems
 	// to have been built to plug into some other software that expects

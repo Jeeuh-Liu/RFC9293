@@ -3,6 +3,7 @@ package network
 import (
 	"bufio"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -23,22 +24,22 @@ func (node *Node) ScanClI() {
 		for scanner.Scan() {
 			line := scanner.Text()
 			ws := strings.Split(line, " ")
-			// fmt.Println(ws)
-			if ws[0] == "li" && (len(ws) == 1 || len(ws) == 2) {
+			// fmt.Println(ws, len(ws), ws[0])
+			if (len(ws) == 1 || len(ws) == 2) && ws[0] == "li" {
 				if len(ws) == 1 {
-					cli := proto.NewCLI(proto.LI, 0, []byte{}, "")
+					cli := proto.NewCLI(proto.LI, 0, []byte{}, "", 0, "")
 					node.NodeCLIChan <- cli
 				} else {
 					// print li to a file
 				}
-			} else if ws[0] == "lr" && (len(ws) == 1 || len(ws) == 2) {
+			} else if (len(ws) == 1 || len(ws) == 2) && ws[0] == "lr" {
 				if len(ws) == 1 {
-					cli := proto.NewCLI(proto.LR, 0, []byte{}, "")
+					cli := proto.NewCLI(proto.LR, 0, []byte{}, "", 0, "")
 					node.NodeCLIChan <- cli
 				} else {
 					// print lr to a file
 				}
-			} else if ws[0] == "up" && len(ws) == 2 {
+			} else if len(ws) == 2 && ws[0] == "up" {
 				id, err := strconv.Atoi(ws[1])
 				if err != nil {
 					fmt.Printf("strconv.Atoi: parsing %v: invalid syntax\n> ", ws[1])
@@ -49,13 +50,12 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// open link
-				cli := proto.NewCLI(uint8(proto.SetUpT), uint8(id), []byte{}, "")
+				cli := proto.NewCLI(uint8(proto.SetUpT), uint8(id), []byte{}, "", 0, "")
 				node.NodeCLIChan <- cli
-			} else if len(line) >= 4 && len(strings.Split(line, " ")) == 2 && line[:4] == "down" {
-				cmds := strings.Split(line, " ")
-				id, err := strconv.Atoi(cmds[1])
+			} else if len(ws) == 2 && ws[0] == "down" {
+				id, err := strconv.Atoi(ws[1])
 				if err != nil {
-					fmt.Printf("strconv.Atoi: parsing %v: invalid syntax\n> ", cmds[1])
+					fmt.Printf("strconv.Atoi: parsing %v: invalid syntax\n> ", ws[1])
 					continue
 				}
 				if id >= len(node.ID2Interface) {
@@ -63,10 +63,21 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// close link
-				cli := proto.NewCLI(uint8(proto.SetDownT), uint8(id), []byte{}, "")
+				cli := proto.NewCLI(uint8(proto.SetDownT), uint8(id), []byte{}, "", 0, "")
 				node.NodeCLIChan <- cli
-			} else if line == "q" {
-				cli := proto.NewCLI(proto.Quit, 0, []byte{}, "")
+			} else if len(ws) == 1 && ws[0] == "q" {
+				cli := proto.NewCLI(proto.Quit, 0, []byte{}, "", 0, "")
+				node.NodeCLIChan <- cli
+			} else if len(ws) >= 4 && ws[0] == "send" {
+				destIP := net.ParseIP(ws[1]).String()
+				protoID, err := strconv.Atoi(ws[2])
+				if err != nil {
+					fmt.Printf("strconv.Atoi: parsing %v: invalid syntax\n> ", ws[1])
+					continue
+				}
+				msg := line[len(ws[0])+len(ws[1])+len(ws[2])+3:]
+				// fmt.Println(msg)
+				cli := proto.NewCLI(proto.TypeSendPacket, 0, []byte{}, destIP, protoID, msg)
 				node.NodeCLIChan <- cli
 			} else {
 				fmt.Printf("Invalid command\n> ")
@@ -107,6 +118,8 @@ func (node *Node) HandleCLI() {
 			node.HandleRIPResp(cli.Bytes)
 		case proto.TypeRouteEx:
 			node.HandleRouteEx(cli.DestIP)
+		case proto.TypeSendPacket:
+			node.HandleSendPacket(cli.DestIP, cli.ProtoID, cli.Msg)
 		}
 	}
 }
@@ -114,14 +127,14 @@ func (node *Node) HandleCLI() {
 // Broadcast RIP through LinkInterface
 func (node *Node) RIPRespDaemon() {
 	for {
-		cli := proto.NewCLI(proto.TypeBroadcastRIPResp, 0, []byte{}, "")
+		cli := proto.NewCLI(proto.TypeBroadcastRIPResp, 0, []byte{}, "", 0, "")
 		node.NodeCLIChan <- cli
 		time.Sleep(5 * time.Second)
 	}
 }
 
 func (node *Node) RIPReqDaemon() {
-	cli := proto.NewCLI(proto.TypeBroadcastRIPReq, 0, []byte{}, "")
+	cli := proto.NewCLI(proto.TypeBroadcastRIPReq, 0, []byte{}, "", 0, "")
 	node.NodeCLIChan <- cli
 }
 
@@ -129,6 +142,6 @@ func (node *Node) RIPReqDaemon() {
 func (node *Node) SendExTimeCLI(destIP string) {
 	// sleep 12 second and check whether the time expires
 	time.Sleep(12 * time.Second)
-	cli := proto.NewCLI(proto.TypeRouteEx, 0, []byte{}, destIP)
+	cli := proto.NewCLI(proto.TypeRouteEx, 0, []byte{}, destIP, 0, "")
 	node.NodeCLIChan <- cli
 }

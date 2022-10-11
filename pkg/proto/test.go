@@ -12,13 +12,18 @@ type Test struct {
 	Body   []byte
 }
 
-func NewTest(IPSrc, IPDest, msg string) *Test {
+func NewTest(IPSrc, IPDest, msg string, ttl int) *Test {
 	body := []byte(msg)
-	header := NewTestHeader(IPSrc, IPDest, len(body))
+	header := NewTestHeader(IPSrc, IPDest, len(body), ttl)
 	test := &Test{
 		Header: header,
 		Body:   body,
 	}
+	headerBytes, err := test.Header.Marshal()
+	if err != nil {
+		log.Fatalln("Error marshalling header:  ", err)
+	}
+	test.Header.Checksum = int(ComputeChecksum(headerBytes))
 	return test
 }
 
@@ -48,7 +53,7 @@ func UnmarshalTest(bytes []byte) *Test {
 
 // *******************************************************************
 // Test Header
-func NewTestHeader(IPSrc, IPDest string, bodyLen int) *ipv4.Header {
+func NewTestHeader(IPSrc, IPDest string, bodyLen, ttl int) *ipv4.Header {
 	return &ipv4.Header{
 		Version:  4,
 		Len:      20,
@@ -56,7 +61,7 @@ func NewTestHeader(IPSrc, IPDest string, bodyLen int) *ipv4.Header {
 		TotalLen: 20 + bodyLen,
 		Flags:    0,
 		FragOff:  0,
-		TTL:      16,
+		TTL:      ttl,
 		Protocol: 0,
 		Checksum: 0,
 		Src:      net.ParseIP(IPSrc),

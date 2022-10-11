@@ -17,6 +17,8 @@ const (
 	TypeHandleRIPResp = uint8(8)
 	// Remote Route Expiration
 	TypeRouteEx = uint8(9)
+	// Send Packet
+	TypeSendPacket = uint8(10)
 )
 
 type CLI struct {
@@ -24,16 +26,21 @@ type CLI struct {
 	ID      uint8
 	// packet: bytes of body
 	Bytes []byte
-	// dest IP
+	// dest IP (which can be used to send packet)
 	DestIP string
+	// Send Packet
+	ProtoID int
+	Msg     string
 }
 
-func NewCLI(cliType, id uint8, bytes []byte, destIP string) *CLI {
+func NewCLI(cliType, id uint8, bytes []byte, destIP string, protoID int, msg string) *CLI {
 	cli := &CLI{
 		CLIType: cliType,
 		ID:      id,
 		Bytes:   bytes,
 		DestIP:  destIP,
+		ProtoID: protoID,
+		Msg:     msg,
 	}
 	return cli
 }

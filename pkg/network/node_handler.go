@@ -91,6 +91,7 @@ func (node *Node) HandleBroadcastRIPResp() {
 			// fmt.Println(entries)
 		}
 		rip := proto.NewRIP(li.IPLocal, li.IPRemote, 2, entries)
+		// fmt.Println("Send", rip.Header)
 		bytes := rip.Marshal()
 		li.SendPacket(bytes)
 	}
@@ -99,8 +100,6 @@ func (node *Node) HandleBroadcastRIPResp() {
 // ***********************************************************************************
 // Handle Packet
 func (node *Node) HandlePacket(bytes []byte, destAddr string) {
-	// checksum
-
 	// check if  match can any port and the port is still alive
 	canMatch := false
 	isAlive := false
@@ -113,20 +112,41 @@ func (node *Node) HandlePacket(bytes []byte, destAddr string) {
 		}
 	}
 	if !canMatch || !isAlive {
-		// fmt.Printf("%v does not match and be alive\n", destAddr)
+		fmt.Printf("%v does not match and be alive\n", destAddr)
 		return
 	}
-	header, err := ipv4.ParseHeader(bytes[:20])
+
+	// check length of bytes
+	if len(bytes) < 20 {
+		// fmt.Println(len(bytes))
+		return
+	}
+	h, err := ipv4.ParseHeader(bytes[:20])
 	if err != nil {
 		log.Fatalln("Parse Header", err)
 	}
-	switch header.Protocol {
+
+	if h.TotalLen != len(bytes) {
+		// fmt.Println(header.TotalLen, len(bytes))
+		return
+	}
+	// Checksum: does not work now!!
+	// checksum := header.Checksum(bytes[:20], 0)
+	// fmt.Println(checksum)
+	// checksum := int(proto.ComputeChecksum(bytes[:20]))
+	// if header.Checksum != checksum {
+	// 	fmt.Println("Receive", header)
+	// 	return
+	// }
+
+	// HandleRIPResp or HandleTest
+	switch h.Protocol {
 	case 200:
 		// fmt.Printf("Receive a RIP Packet from %v\n", destAddr)
 		node.HandleRIPResp(bytes)
 	case 0:
 		// fmt.Printf("Receive a TEST Packet from %v\n", destAddr)
-
+		node.HandleTest(bytes)
 	}
 }
 
@@ -208,4 +228,73 @@ func ipv4Num2str(addr uint32) string {
 		addr >>= 8
 	}
 	return res
+}
+
+// ***********************************************************************************
+// Handle Send Packet
+func (node *Node) HandleSendPacket(destIP string, protoID int, msg string) {
+	// Check whether destIP belongs to current node
+	if _, ok := node.LocalIPSet[destIP]; ok {
+		fmt.Printf("---Node received packet!---\n")
+		fmt.Printf("        source IP      : %v\n", destIP)
+		fmt.Printf("        destination IP : %v\n", destIP)
+		fmt.Printf("        protocol       : %v\n", 0)
+		fmt.Printf("        payload length : %v\n", len(msg))
+		fmt.Printf("        payload        : %v\n", msg)
+		fmt.Printf("----------------------------\n")
+		return
+	}
+
+	// Check whether current node can reach destIP
+	if route, ok := node.DestIP2Route[destIP]; ok {
+		// Choose the link whose IPRemote == nextIP to send
+		for _, li := range node.ID2Interface {
+			if li.IPRemote == route.Next {
+				fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
+				test := proto.NewTest(li.IPLocal, destIP, msg, 16)
+				bytes := test.Marshal()
+				li.SendPacket(bytes)
+			}
+		}
+	} else {
+		fmt.Println("destIP does not exist")
+	}
+}
+
+// ***********************************************************************************
+// Handle Test Packet
+func (node *Node) HandleTest(bytes []byte) {
+	test := proto.UnmarshalTest(bytes)
+	srcIP := test.Header.Src.String()
+	destIP := test.Header.Dst.String()
+	msg := string(test.Body)
+	ttl := test.Header.TTL
+	// Check ttl
+	if ttl == 0 {
+		return
+	}
+	// Check whether destIP belongs to current node
+	if _, ok := node.LocalIPSet[destIP]; ok {
+		fmt.Printf("---Node received packet!---\n")
+		fmt.Printf("        source IP      : %v\n", srcIP)
+		fmt.Printf("        destination IP : %v\n", destIP)
+		fmt.Printf("        protocol       : %v\n", 0)
+		fmt.Printf("        payload length : %v\n", len(msg))
+		fmt.Printf("        payload        : %v\n", msg)
+		fmt.Printf("----------------------------\n")
+		return
+	}
+	if route, ok := node.DestIP2Route[destIP]; ok {
+		// Choose the link whose IPRemote == nextIP to send
+		for _, li := range node.ID2Interface {
+			if li.IPRemote == route.Next {
+				fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
+				test := proto.NewTest(srcIP, destIP, msg, ttl-1)
+				bytes := test.Marshal()
+				li.SendPacket(bytes)
+			}
+		}
+	} else {
+		fmt.Println("destIP does not exist")
+	}
 }
