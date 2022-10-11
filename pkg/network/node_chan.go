@@ -22,22 +22,26 @@ func (node *Node) ScanClI() {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
 			line := scanner.Text()
-			if len(line) >= 2 && line[:2] == "li" {
-				if len(line) == 2 {
+			ws := strings.Split(line, " ")
+			// fmt.Println(ws)
+			if ws[0] == "li" && (len(ws) == 1 || len(ws) == 2) {
+				if len(ws) == 1 {
 					cli := proto.NewCLI(proto.LI, 0, []byte{}, "")
 					node.NodeCLIChan <- cli
+				} else {
+					// print li to a file
 				}
-			} else if len(line) >= 2 && line[:2] == "lr" {
-				if len(line) == 2 {
+			} else if ws[0] == "lr" && (len(ws) == 1 || len(ws) == 2) {
+				if len(ws) == 1 {
 					cli := proto.NewCLI(proto.LR, 0, []byte{}, "")
 					node.NodeCLIChan <- cli
+				} else {
+					// print lr to a file
 				}
-
-			} else if len(line) >= 2 && len(strings.Split(line, " ")) == 2 && line[:2] == "up" {
-				cmds := strings.Split(line, " ")
-				id, err := strconv.Atoi(cmds[1])
+			} else if ws[0] == "up" && len(ws) == 2 {
+				id, err := strconv.Atoi(ws[1])
 				if err != nil {
-					fmt.Printf("strconv.Atoi: parsing %v: invalid syntax\n> ", cmds[1])
+					fmt.Printf("strconv.Atoi: parsing %v: invalid syntax\n> ", ws[1])
 					continue
 				}
 				if id >= len(node.ID2Interface) {

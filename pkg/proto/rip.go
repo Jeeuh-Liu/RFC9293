@@ -41,13 +41,13 @@ func (rip *RIP) Marshal() []byte {
 	return bytes
 }
 
-func UnmarshalRIPResp(bytes []byte) RIP {
+func UnmarshalRIPResp(bytes []byte) *RIP {
 	header, err := ipv4.ParseHeader(bytes[:20])
 	if err != nil {
 		log.Fatalln(err)
 	}
 	body := UnmarshalRIPBody(bytes[20:])
-	rip := RIP{
+	rip := &RIP{
 		Header: header,
 		Body:   body,
 	}
