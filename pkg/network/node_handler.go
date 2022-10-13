@@ -25,14 +25,17 @@ func (node *Node) HandlePrintInterfaces() {
 func (node *Node) HandleSetUp(id uint8) {
 	li := node.ID2Interface[id]
 	route := NewRoute(li.IPLocal, li.IPLocal, 0)
+	// add routes of local IP back to route table
 	node.LocalIPSet[li.IPLocal] = true
 	node.DestIP2Route[li.IPLocal] = route
+	// we do not need to handle remote routes manually
+	// change status of link
 	node.ID2Interface[uint8(id)].OpenRemoteLink()
 }
 
 func (node *Node) HandleSetDown(id uint8) {
 	li := node.ID2Interface[id]
-	// delete the local routes
+	// delete the routes of local IP from route table
 	delete(node.LocalIPSet, li.IPLocal)
 	delete(node.DestIP2Route, li.IPLocal)
 	// if a remote destIP needs to use this link, delete corresponding its route and metadata
@@ -44,6 +47,7 @@ func (node *Node) HandleSetDown(id uint8) {
 			delete(node.RemoteDestIP2SrcIP, destIP)
 		}
 	}
+	// change status of link
 	node.ID2Interface[uint8(id)].CloseRemoteLink()
 }
 
@@ -242,6 +246,7 @@ func (node *Node) HandleSendPacket(destIP string, protoID int, msg string) {
 		fmt.Printf("        payload length : %v\n", len(msg))
 		fmt.Printf("        payload        : %v\n", msg)
 		fmt.Printf("----------------------------\n")
+		// Pass  the packet into TCP Handler
 		return
 	}
 

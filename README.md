@@ -66,13 +66,15 @@ lr
 send packets
 
 ```shell
-send <vip> <proto> <string>    
+send <vip> <proto> <string>  
+#A send to B
+send 10.0.0.1 0 Hello from A
 
 #A send to B
-send 10.0.0.14 0 "Hello from A"
+send 10.0.0.14 0 Hello from A
 
 #A send to C
-send 10.0.0.10 0 "Hello from A"
+send 10.0.0.10 0 Hello from A
 ```
 
 
@@ -283,3 +285,33 @@ After receiving a RIP response
 - Check whether destIP of this RIP response is srcIP of one interface
   - if yes, ignroe
   - continue other steps 
+
+
+
+
+
+# Milestone
+
+
+
+## 2
+
+when to forward a packet
+
+(1) 
+
+(2) periodically broacast RIP response
+
+(3)
+
+
+
+## 3
+
+Why two packets received when sending to itself
+
+
+
+# Questions
+
+Assume A has 2 links, if 10.0.0.10 is down but B is trying to send a test packet fo 10.0.0.10 and it can reach another IP port 10.0.0.11. In this case, does A receive this packet?

@@ -16,20 +16,16 @@ import (
 // The driver program
 
 type Node struct {
-	ID2Interface map[uint8]*link.LinkInterface
-	NodeCLIChan  chan *proto.CLI
+	ID2Interface map[uint8]*link.LinkInterface // store interfaces and facilitate down and up
+	NodeCLIChan  chan *proto.CLI               // (1) receive CLI from user (2) receive msg from link interface
 	// Routers
-	DestIP2Route map[string]Route
-	// Local MAC addr and UDPConn
-	LocalConn *net.UDPConn
+	DestIP2Route map[string]Route //store routes and facilitate finding target route for Test Packet
 	// RIP metadata
 	// check min_cost
-	LocalIPSet        map[string]bool
-	RemoteDestIP2Cost map[string]uint32
-	// check Split Horizon with Poisoned Reverse
-	RemoteDestIP2SrcIP map[string]string
-	// Check Expiration time of a routing entry
-	RemoteDest2ExTime map[string]time.Time
+	LocalIPSet         map[string]bool      // store all local IP in this node to facilitate test packet checking
+	RemoteDestIP2Cost  map[string]uint32    // ensure min cost of new route
+	RemoteDestIP2SrcIP map[string]string    // check Split Horizon with Poisoned Reverse to set cost = 16
+	RemoteDest2ExTime  map[string]time.Time // Check Expiration time of a new route
 }
 
 func (node *Node) Make(args []string) {
