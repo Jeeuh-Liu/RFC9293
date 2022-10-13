@@ -12,5 +12,6 @@ func main() {
 	}
 	node := &network.Node{}
 	node.Make(os.Args)
-	node.HandleCLI()
+	// node.HandleCLI()
+	node.ReceiveOpFromChan()
 }

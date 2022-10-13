@@ -62,6 +62,22 @@ func (node *Node) HandlePrintRoutes() {
 	}
 }
 
+func (node *Node) HandleSendPacket(destIP string, protoID int, msg string) {
+	if route, ok := node.DestIP2Route[destIP]; ok {
+		// Choose the link whose IPRemote == nextIP to send
+		for _, li := range node.ID2Interface {
+			if li.IPRemote == route.Next {
+				fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
+				test := proto.NewPktTest(li.IPLocal, destIP, msg, 16)
+				bytes := test.Marshal()
+				li.SendPacket(bytes)
+				return
+			}
+		}
+	}
+	fmt.Println("destIP does not exist")
+}
+
 // ***********************************************************************************
 // Handle BroadcastRIP
 func (node *Node) HandleBroadcastRIPReq() {
@@ -71,7 +87,7 @@ func (node *Node) HandleBroadcastRIPReq() {
 			continue
 		}
 		entries := []proto.Entry{}
-		rip := proto.NewRIP(li.IPLocal, li.IPRemote, 1, entries)
+		rip := proto.NewPktRIP(li.IPLocal, li.IPRemote, 1, entries)
 		bytes := rip.Marshal()
 		li.SendPacket(bytes)
 	}
@@ -94,17 +110,18 @@ func (node *Node) HandleBroadcastRIPResp() {
 			entries = append(entries, entry)
 			// fmt.Println(entries)
 		}
-		rip := proto.NewRIP(li.IPLocal, li.IPRemote, 2, entries)
-		// fmt.Println("Send", rip.Header)
+		rip := proto.NewPktRIP(li.IPLocal, li.IPRemote, 2, entries)
+
 		bytes := rip.Marshal()
 		li.SendPacket(bytes)
 	}
 }
 
 // ***********************************************************************************
-// Handle Packet
-func (node *Node) HandlePacket(bytes []byte, destAddr string) {
+// Handle Receive Packet
+func (node *Node) HandleReceivePacket(bytes []byte, destAddr string) {
 	// check if  match can any port and the port is still alive
+	// fmt.Println("Receive a packet")
 	canMatch := false
 	isAlive := false
 	for _, li := range node.ID2Interface {
@@ -119,7 +136,6 @@ func (node *Node) HandlePacket(bytes []byte, destAddr string) {
 		fmt.Printf("%v does not match and be alive\n", destAddr)
 		return
 	}
-
 	// check length of bytes
 	if len(bytes) < 20 {
 		// fmt.Println(len(bytes))
@@ -129,20 +145,17 @@ func (node *Node) HandlePacket(bytes []byte, destAddr string) {
 	if err != nil {
 		log.Fatalln("Parse Header", err)
 	}
-
 	if h.TotalLen != len(bytes) {
-		// fmt.Println(header.TotalLen, len(bytes))
+		// fmt.Println(h.TotalLen, len(bytes))
 		return
 	}
-	// Checksum: does not work now!!
-	// checksum := header.Checksum(bytes[:20], 0)
-	// fmt.Println(checksum)
-	// checksum := int(proto.ComputeChecksum(bytes[:20]))
-	// if header.Checksum != checksum {
-	// 	fmt.Println("Receive", header)
+	// Check sum
+	// fmt.Println(bytes)
+	// curChecksum := int(proto.ComputeChecksum(bytes[:20]))
+	// if h.Checksum != curChecksum {
+	// 	fmt.Println("Should be:", h.Checksum, ", Current:", curChecksum)
 	// 	return
 	// }
-
 	// HandleRIPResp or HandleTest
 	switch h.Protocol {
 	case 200:
@@ -165,51 +178,55 @@ func (node *Node) HandleRIPResp(bytes []byte) {
 		if entry.Cost == 16 {
 			continue
 		}
-		// Expiration time
-		// If the destIP is local IP of 1 interface, it will not expire
+		// 1. Expiration time
+		// (1) If the destIP is local IP of 1 interface, it will not expire
 		destIP := ipv4Num2str(entry.Address)
 		if _, ok := node.LocalIPSet[destIP]; ok {
 			continue
 		}
-		// fmt.Printf("Receive a dest addr %v\n", destIP)
-		// Update new Expiration time
+		// (2) If the destIP is remote IP, Update new Expiration time
 		node.RemoteDest2ExTime[destIP] = time.Now().Add(12 * time.Second)
 		go node.SendExTimeCLI(destIP)
 		// fmt.Println(rip.Header.Src)
-		// Min Cost
-		// if the dest addr exists in destAddr2Cost and new cost is bigger, ignore
+
+		// 2. Route
+		oldCost := node.DestIP2Route[destIP].Cost
+		oldNextAddr := node.DestIP2Route[destIP].Dest
 		newCost := entry.Cost + 1
-		// fmt.Printf("newCost is %v\n", newCost)
-		if cost, ok := node.RemoteDestIP2Cost[destIP]; ok && newCost >= cost {
-			// fmt.Printf("oldCost is %v\n", cost)
+		newNextAddr := rip.Header.Src.String()
+		newRoute := NewRoute(destIP, newNextAddr, newCost)
+		// (1) If no existing , update
+		if _, ok := node.RemoteDestIP2Cost[destIP]; !ok {
+			node.UpdateRoutes(newRoute, destIP)
+		}
+		// (2) If newCost < oldCost, update
+		if newCost < oldCost {
+			node.UpdateRoutes(newRoute, destIP)
+		}
+		// (3) If newCost > oldCost and newNextAddr == oldNextAddr, update
+		if newCost > oldCost && newNextAddr == oldNextAddr {
+			node.UpdateRoutes(newRoute, destIP)
+		}
+		// (4) If newCost > oldCost and newNextAddr != oldNextAddr, ignore
+		if newCost > oldCost && newNextAddr != oldNextAddr {
 			continue
 		}
-		nextAddr := rip.Header.Src.String()
-		// fmt.Printf("nextAddr is %v\n", nextAddr)
-		newRoute := NewRoute(destIP, nextAddr, newCost)
-		// fmt.Println("newRoute:", newRoute)
-		node.DestIP2Route[destIP] = newRoute
-		// fmt.Println(node.DestIP2Route)
-		// update the metadata
-		node.RemoteDestIP2Cost[destIP] = newCost
-		node.RemoteDestIP2SrcIP[destIP] = nextAddr
-		// Broadcast RIP Resp because of Triggered Updates
-		// proto.NewEntry(newRoute.Cost, newRoute.Dest)
-		// node.BroadcastRIPRespTU(entry)
+		// (5) If newCost == oldCost, ignore
+		if newCost == oldCost {
+			continue
+		}
 	}
 }
 
-func (node *Node) BroadcastRIPRespTU(entity proto.Entry) {
-	for _, li := range node.ID2Interface {
-		if !li.IsUp() {
-			continue
-		}
-		entries := []proto.Entry{}
-		entries = append(entries, entity)
-		rip := proto.NewRIP(li.IPLocal, li.IPRemote, 2, entries)
-		bytes := rip.Marshal()
-		li.SendPacket(bytes)
-	}
+func (node *Node) UpdateRoutes(newRoute Route, destIP string) {
+	// update routes
+	node.DestIP2Route[destIP] = newRoute
+	// update the metadata
+	node.RemoteDestIP2Cost[destIP] = newRoute.Cost
+	node.RemoteDestIP2SrcIP[destIP] = newRoute.Next
+	// Broadcast RIP Resp because of Triggered Updates
+	entry := proto.NewEntry(newRoute.Cost, newRoute.Dest)
+	node.BroadcastRIPRespTU(entry)
 }
 
 // ***********************************************************************************
@@ -235,50 +252,31 @@ func ipv4Num2str(addr uint32) string {
 }
 
 // ***********************************************************************************
-// Handle Send Packet
-func (node *Node) HandleSendPacket(destIP string, protoID int, msg string) {
-	// Check whether destIP belongs to current node
-	if _, ok := node.LocalIPSet[destIP]; ok {
-		fmt.Printf("---Node received packet!---\n")
-		fmt.Printf("        source IP      : %v\n", destIP)
-		fmt.Printf("        destination IP : %v\n", destIP)
-		fmt.Printf("        protocol       : %v\n", 0)
-		fmt.Printf("        payload length : %v\n", len(msg))
-		fmt.Printf("        payload        : %v\n", msg)
-		fmt.Printf("----------------------------\n")
-		// Pass  the packet into TCP Handler
-		return
-	}
-
-	// Check whether current node can reach destIP
-	if route, ok := node.DestIP2Route[destIP]; ok {
-		// Choose the link whose IPRemote == nextIP to send
-		for _, li := range node.ID2Interface {
-			if li.IPRemote == route.Next {
-				fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
-				test := proto.NewTest(li.IPLocal, destIP, msg, 16)
-				bytes := test.Marshal()
-				li.SendPacket(bytes)
-			}
-		}
-	} else {
-		fmt.Println("destIP does not exist")
-	}
-}
-
-// ***********************************************************************************
 // Handle Test Packet
 func (node *Node) HandleTest(bytes []byte) {
-	test := proto.UnmarshalTest(bytes)
+	test := proto.UnmarshalPktTest(bytes)
 	srcIP := test.Header.Src.String()
 	destIP := test.Header.Dst.String()
 	msg := string(test.Body)
 	ttl := test.Header.TTL
-	// Check ttl
+	// 1. Validity
+	// (1) Is checksum in header valid?
+	// h, err := ipv4.ParseHeader(bytes[:20])
+	// if err != nil {
+	// 	log.Fatalln("Parse Header", err)
+	// }
+	// curChecksum := int(proto.ComputeChecksum(bytes[:20]))
+	// if h.Checksum != curChecksum {
+	// 	fmt.Println("Should be:", h.Checksum, ", Current:", curChecksum)
+	// 	return
+	// }
+	// (2) Is ttl == 0 ?
 	if ttl == 0 {
 		return
 	}
-	// Check whether destIP belongs to current node
+
+	// 2. Forwarding
+	// (1) Does this packet belong to me?
 	if _, ok := node.LocalIPSet[destIP]; ok {
 		fmt.Printf("---Node received packet!---\n")
 		fmt.Printf("        source IP      : %v\n", srcIP)
@@ -289,17 +287,18 @@ func (node *Node) HandleTest(bytes []byte) {
 		fmt.Printf("----------------------------\n")
 		return
 	}
+	// (2) Does packet match any IF in the forwarding table?
 	if route, ok := node.DestIP2Route[destIP]; ok {
 		// Choose the link whose IPRemote == nextIP to send
 		for _, li := range node.ID2Interface {
 			if li.IPRemote == route.Next {
 				fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
-				test := proto.NewTest(srcIP, destIP, msg, ttl-1)
+				test := proto.NewPktTest(srcIP, destIP, msg, ttl-1)
 				bytes := test.Marshal()
 				li.SendPacket(bytes)
 			}
 		}
-	} else {
-		fmt.Println("destIP does not exist")
 	}
+	// (3) Does the router have next hop?
+	fmt.Println("destIP does not exist")
 }

@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// ScanCLI
+// Scan NodeCLI
 /*
 	When to output '> ' ?
 	(1) After sending a cli to chan and  handling the cli, we can output a '>'
@@ -27,14 +27,14 @@ func (node *Node) ScanClI() {
 			// fmt.Println(ws, len(ws), ws[0])
 			if (len(ws) == 1 || len(ws) == 2) && ws[0] == "li" {
 				if len(ws) == 1 {
-					cli := proto.NewCLI(proto.LI, 0, []byte{}, "", 0, "")
+					cli := proto.NewNodeCLI(proto.LI, 0, []byte{}, "", 0, "")
 					node.NodeCLIChan <- cli
 				} else {
 					// print li to a file
 				}
 			} else if (len(ws) == 1 || len(ws) == 2) && ws[0] == "lr" {
 				if len(ws) == 1 {
-					cli := proto.NewCLI(proto.LR, 0, []byte{}, "", 0, "")
+					cli := proto.NewNodeCLI(proto.LR, 0, []byte{}, "", 0, "")
 					node.NodeCLIChan <- cli
 				} else {
 					// print lr to a file
@@ -50,7 +50,7 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// open link
-				cli := proto.NewCLI(uint8(proto.SetUpT), uint8(id), []byte{}, "", 0, "")
+				cli := proto.NewNodeCLI(uint8(proto.SetUpT), uint8(id), []byte{}, "", 0, "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 2 && ws[0] == "down" {
 				id, err := strconv.Atoi(ws[1])
@@ -63,10 +63,10 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// close link
-				cli := proto.NewCLI(uint8(proto.SetDownT), uint8(id), []byte{}, "", 0, "")
+				cli := proto.NewNodeCLI(uint8(proto.SetDownT), uint8(id), []byte{}, "", 0, "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 1 && ws[0] == "q" {
-				cli := proto.NewCLI(proto.Quit, 0, []byte{}, "", 0, "")
+				cli := proto.NewNodeCLI(proto.Quit, 0, []byte{}, "", 0, "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) >= 4 && ws[0] == "send" {
 				destIP := net.ParseIP(ws[1]).String()
@@ -77,7 +77,7 @@ func (node *Node) ScanClI() {
 				}
 				msg := line[len(ws[0])+len(ws[1])+len(ws[2])+3:]
 				// fmt.Println(msg)
-				cli := proto.NewCLI(proto.TypeSendPacket, 0, []byte{}, destIP, protoID, msg)
+				cli := proto.NewNodeCLI(proto.TypeSendPacket, 0, []byte{}, destIP, protoID, msg)
 				node.NodeCLIChan <- cli
 			} else {
 				fmt.Printf("Invalid command\n> ")
@@ -86,62 +86,38 @@ func (node *Node) ScanClI() {
 	}
 }
 
-// ******************************************************************
-// Output the data of CLI
-func (node *Node) HandleCLI() {
-	fmt.Printf("> ")
-	for {
-		cli := <-node.NodeCLIChan
-		switch cli.CLIType {
-		case proto.LI:
-			node.HandlePrintInterfaces()
-			fmt.Printf("> ")
-		case proto.SetUpT:
-			node.HandleSetUp(cli.ID)
-			fmt.Printf("> ")
-		case proto.SetDownT:
-			node.HandleSetDown(cli.ID)
-			fmt.Printf("> ")
-		case proto.Quit:
-			node.HandleQuit()
-			fmt.Printf("> ")
-		case proto.LR:
-			node.HandlePrintRoutes()
-			fmt.Printf("> ")
-		case proto.TypeBroadcastRIPResp:
-			node.HandleBroadcastRIPResp()
-		case proto.TypeBroadcastRIPReq:
-			node.HandleBroadcastRIPReq()
-		case proto.TypeHandlePacket:
-			node.HandlePacket(cli.Bytes, cli.DestIP)
-		case proto.TypeHandleRIPResp:
-			node.HandleRIPResp(cli.Bytes)
-		case proto.TypeRouteEx:
-			node.HandleRouteEx(cli.DestIP)
-		case proto.TypeSendPacket:
-			node.HandleSendPacket(cli.DestIP, cli.ProtoID, cli.Msg)
-		}
-	}
-}
-
-// Broadcast RIP through LinkInterface
+// Send NodeBroadcast
 func (node *Node) RIPRespDaemon() {
 	for {
-		cli := proto.NewCLI(proto.TypeBroadcastRIPResp, 0, []byte{}, "", 0, "")
-		node.NodeCLIChan <- cli
+		cli := proto.NewNodeBC(proto.TypeBroadcastRIPResp, 0, []byte{}, "", 0, "")
+		node.NodeBCChan <- cli
 		time.Sleep(5 * time.Second)
 	}
 }
 
 func (node *Node) RIPReqDaemon() {
-	cli := proto.NewCLI(proto.TypeBroadcastRIPReq, 0, []byte{}, "", 0, "")
-	node.NodeCLIChan <- cli
+	cli := proto.NewNodeBC(proto.TypeBroadcastRIPReq, 0, []byte{}, "", 0, "")
+	node.NodeBCChan <- cli
 }
 
-// Route Ex timeout
+// Send NodeEx
 func (node *Node) SendExTimeCLI(destIP string) {
 	// sleep 12 second and check whether the time expires
 	time.Sleep(12 * time.Second)
-	cli := proto.NewCLI(proto.TypeRouteEx, 0, []byte{}, destIP, 0, "")
-	node.NodeCLIChan <- cli
+	cli := proto.NewNodeEx(proto.TypeRouteEx, 0, []byte{}, destIP, 0, "")
+	node.NodeExChan <- cli
+}
+
+// Send NodePktOp
+func (node *Node) BroadcastRIPRespTU(entity proto.Entry) {
+	for _, li := range node.ID2Interface {
+		if !li.IsUp() {
+			continue
+		}
+		entries := []proto.Entry{}
+		entries = append(entries, entity)
+		rip := proto.NewPktRIP(li.IPLocal, li.IPRemote, 2, entries)
+		bytes := rip.Marshal()
+		li.SendPacket(bytes)
+	}
 }

@@ -7,15 +7,15 @@ import (
 	"golang.org/x/net/ipv4"
 )
 
-type Test struct {
+type PktTest struct {
 	Header *ipv4.Header
 	Body   []byte
 }
 
-func NewTest(IPSrc, IPDest, msg string, ttl int) *Test {
+func NewPktTest(IPSrc, IPDest, msg string, ttl int) *PktTest {
 	body := []byte(msg)
 	header := NewTestHeader(IPSrc, IPDest, len(body), ttl)
-	test := &Test{
+	test := &PktTest{
 		Header: header,
 		Body:   body,
 	}
@@ -27,7 +27,7 @@ func NewTest(IPSrc, IPDest, msg string, ttl int) *Test {
 	return test
 }
 
-func (test *Test) Marshal() []byte {
+func (test *PktTest) Marshal() []byte {
 	bytes, err := test.Header.Marshal()
 	if err != nil {
 		log.Fatalln("Header Marshal Error", err)
@@ -37,14 +37,14 @@ func (test *Test) Marshal() []byte {
 	return bytes
 }
 
-func UnmarshalTest(bytes []byte) *Test {
+func UnmarshalPktTest(bytes []byte) *PktTest {
 	header, err := ipv4.ParseHeader(bytes[:20])
 	if err != nil {
 		log.Fatalln(err)
 	}
 	body := bytes[20:]
 
-	test := &Test{
+	test := &PktTest{
 		Header: header,
 		Body:   body,
 	}

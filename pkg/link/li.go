@@ -19,18 +19,18 @@ type LinkInterface struct {
 	// we use RemoteConn to send data to remote machine
 	LinkConn *net.UDPConn
 	// we use this channel to send packet back to node
-	NodeChan chan *proto.CLI
+	NodePktOpChan chan *proto.NodePktOp
 }
 
 func (li *LinkInterface) Make(udpIp, udpPortRemote, ipLocal, ipRemote string,
-	id uint8, udpPortLocal string, linkConn *net.UDPConn, nodeChan chan *proto.CLI) {
+	id uint8, udpPortLocal string, linkConn *net.UDPConn, nodePktOpChan chan *proto.NodePktOp) {
 	li.ID = id
 	li.MACLocal = udpIp + ":" + udpPortLocal
 	li.MACRemote = udpIp + ":" + udpPortRemote
 	li.IPLocal = ipLocal
 	li.IPRemote = ipRemote
 	// Communication between layer and network
-	li.NodeChan = nodeChan
+	li.NodePktOpChan = nodePktOpChan
 	if li.IPLocal == "" {
 		return
 	}

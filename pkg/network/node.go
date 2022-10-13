@@ -16,8 +16,12 @@ import (
 // The driver program
 
 type Node struct {
-	ID2Interface map[uint8]*link.LinkInterface // store interfaces and facilitate down and up
-	NodeCLIChan  chan *proto.CLI               // (1) receive CLI from user (2) receive msg from link interface
+	ID2Interface map[uint8]*link.LinkInterface // Store interfaces and facilitate down and up
+	// Channel
+	NodeCLIChan   chan *proto.NodeCLI   // Receive CLI from user
+	NodeBCChan    chan *proto.NodeBC    // Broadcast RIP
+	NodeExChan    chan *proto.NodeEx    // Handle expiration of route
+	NodePktOpChan chan *proto.NodePktOp // Receive msg from link interface
 	// Routers
 	DestIP2Route map[string]Route //store routes and facilitate finding target route for Test Packet
 	// RIP metadata
@@ -30,7 +34,11 @@ type Node struct {
 
 func (node *Node) Make(args []string) {
 	// Initialize NodeCLIChan, we can set to bigger to avoid some deadlock
-	node.NodeCLIChan = make(chan *proto.CLI)
+	node.NodeCLIChan = make(chan *proto.NodeCLI)
+	// Initialize NodeOpChan
+	node.NodeBCChan = make(chan *proto.NodeBC)
+	node.NodeExChan = make(chan *proto.NodeEx)
+	node.NodePktOpChan = make(chan *proto.NodePktOp)
 	// Initialize ID2Interface
 	node.ID2Interface = make(map[uint8]*link.LinkInterface)
 	inx := args[1]
@@ -70,7 +78,7 @@ func (node *Node) Make(args []string) {
 		li := &link.LinkInterface{}
 		// elements: udpIp, udpPortRemote, ipLocal, ipRemote
 		//li.Make(udpIp, udpPortRemote, ipLocal, ipRemote, id, udpPortLocal)
-		li.Make(eles[0], eles[1], eles[2], eles[3], id, udpPortLocal, linkConn, node.NodeCLIChan)
+		li.Make(eles[0], eles[1], eles[2], eles[3], id, udpPortLocal, linkConn, node.NodePktOpChan)
 		fmt.Printf("%v: %v\n", id, eles[2])
 		node.ID2Interface[id] = li
 		id++

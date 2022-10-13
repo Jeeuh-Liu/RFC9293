@@ -46,9 +46,15 @@ func (li *LinkInterface) ServeLink() {
 		// if the sourceAddr does not belong to this link, abandon it directly
 		destAddr := sourceAddr.String()
 		// send a CLI to handle packet
-		cli := proto.NewCLI(proto.TypeHandlePacket, 0, bytes[:bnum], destAddr, 0, "")
-		li.NodeChan <- cli
+		nodePktOp := proto.NewNodePktOp(proto.TypeReceivePacket, 0, CopyByteSlice(bytes, bnum), destAddr, 0, "")
+		li.NodePktOpChan <- nodePktOp
 	}
+}
+
+func CopyByteSlice(bytes []byte, bnum int) []byte {
+	newB := make([]byte, 1400)
+	copy(newB, bytes[:bnum])
+	return newB[:bnum]
 }
 
 func (li *LinkInterface) IsUp() bool {
@@ -66,6 +72,7 @@ func (li *LinkInterface) SendPacket(packetBytes []byte) {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	// bnum, err := li.LinkConn.WriteToUDP(packetBytes, remoteAddr)
 	_, err = li.LinkConn.WriteToUDP(packetBytes, remoteAddr)
 	if err != nil {
 		log.Fatalln("sendRIP", err)

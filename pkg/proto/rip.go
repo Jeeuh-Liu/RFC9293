@@ -12,13 +12,13 @@ import (
 	"golang.org/x/net/ipv4"
 )
 
-type RIP struct {
+type PktRIP struct {
 	Header *ipv4.Header
 	Body   *RIPBody
 }
 
-func NewRIP(IPLocal, IPRemote string, commandType uint16, entries []Entry) *RIP {
-	rip := &RIP{}
+func NewPktRIP(IPLocal, IPRemote string, commandType uint16, entries []Entry) *PktRIP {
+	rip := &PktRIP{}
 	rip.Body = NewRIPBody(entries, commandType)
 	rip.Header = NewRIPHeader(IPLocal, IPRemote, len(rip.Body.Marshal()))
 	headerBytes, err := rip.Header.Marshal()
@@ -29,7 +29,7 @@ func NewRIP(IPLocal, IPRemote string, commandType uint16, entries []Entry) *RIP 
 	return rip
 }
 
-func (rip *RIP) Marshal() []byte {
+func (rip *PktRIP) Marshal() []byte {
 	bytes, err := rip.Header.Marshal()
 	// num of bytes in header is 20 bytes
 	// fmt.Printf("num of bytes of Header is %v\n", len(bytes))
@@ -41,13 +41,13 @@ func (rip *RIP) Marshal() []byte {
 	return bytes
 }
 
-func UnmarshalRIPResp(bytes []byte) *RIP {
+func UnmarshalRIPResp(bytes []byte) *PktRIP {
 	header, err := ipv4.ParseHeader(bytes[:20])
 	if err != nil {
 		log.Fatalln(err)
 	}
 	body := UnmarshalRIPBody(bytes[20:])
-	rip := &RIP{
+	rip := &PktRIP{
 		Header: header,
 		Body:   body,
 	}
@@ -130,8 +130,9 @@ func UnmarshalRIPBody(bytes []byte) *RIPBody {
 }
 
 func ComputeChecksum(b []byte) uint16 {
-	// fmt.Println("Send", b)
+	// fmt.Println(b)
 	checksum := header.Checksum(b, 0)
+	// fmt.Println(checksum)
 	// Invert the checksum value.  Why is this necessary?
 	// The checksum function in the library we're using seems
 	// to have been built to plug into some other software that expects
@@ -139,7 +140,7 @@ func ComputeChecksum(b []byte) uint16 {
 	// The reasons for this are unclear to me at the moment, but for now
 	// take my word for it.  =)
 	checksumInv := checksum ^ 0xffff
-
+	// fmt.Println(checksumInv)
 	return checksumInv
 }
 
