@@ -96,6 +96,67 @@ git ls-files | xargs cat | wc -l
 
 
 
+## Loop Test
+
+net 2 inx
+
+```shell
+./tools/net2lnx nets/loop.net
+```
+
+
+
+build 6 ref nodes
+
+```shell
+./tools/ref_node src.lnx
+
+./tools/ref_node srcR.lnx
+
+./tools/ref_node short.lnx
+
+./tools/ref_node long1.lnx
+
+./tools/ref_node long2.lnx
+
+./tools/ref_node dstR.lnx
+
+./tools/ref_node dst.lnx
+```
+
+
+
+build 6 self-designed node
+
+```shell
+./node src.lnx
+
+./node srcR.lnx
+
+./node short.lnx
+
+./node long1.lnx
+
+./node long2.lnx
+
+./node dstR.lnx
+
+./node dst.lnx
+```
+
+
+
+src sends a packet to dst
+
+```shell
+#A send to C
+send 192.168.0.14 0 Hello from src
+```
+
+
+
+
+
 # Link
 
 ## Close

@@ -66,5 +66,6 @@ func NewTestHeader(IPSrc, IPDest string, bodyLen, ttl int) *ipv4.Header {
 		Checksum: 0,
 		Src:      net.ParseIP(IPSrc),
 		Dst:      net.ParseIP(IPDest),
+		Options:  []byte{},
 	}
 }

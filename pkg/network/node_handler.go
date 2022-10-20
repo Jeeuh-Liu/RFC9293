@@ -58,12 +58,15 @@ func (node *Node) HandleQuit() {
 func (node *Node) HandlePrintRoutes() {
 	fmt.Println("    dest        	next        cost")
 	for _, r := range node.DestIP2Route {
-		fmt.Printf("    %v         %v         %v\n", r.Dest, r.Next, r.Cost)
+		if r.Cost != 16 {
+			fmt.Printf("    %v         %v         %v\n", r.Dest, r.Next, r.Cost)
+		}
 	}
 }
 
 func (node *Node) HandleSendPacket(destIP string, protoID int, msg string) {
-	if route, ok := node.DestIP2Route[destIP]; ok {
+	if route, ok := node.DestIP2Route[destIP]; ok && route.Cost < 16 {
+		// check if route.cost == inf => unreachable
 		// Choose the link whose IPRemote == nextIP to send
 		for _, li := range node.ID2Interface {
 			if li.IPRemote == route.Next {
@@ -111,7 +114,7 @@ func (node *Node) HandleBroadcastRIPResp() {
 			// fmt.Println(entries)
 		}
 		rip := proto.NewPktRIP(li.IPLocal, li.IPRemote, 2, entries)
-
+		// fmt.Println("Send", rip.Header)
 		bytes := rip.Marshal()
 		li.SendPacket(bytes)
 	}
@@ -149,13 +152,25 @@ func (node *Node) HandleReceivePacket(bytes []byte, destAddr string) {
 		// fmt.Println(h.TotalLen, len(bytes))
 		return
 	}
-	// Check sum
-	// fmt.Println(bytes)
-	// curChecksum := int(proto.ComputeChecksum(bytes[:20]))
-	// if h.Checksum != curChecksum {
-	// 	fmt.Println("Should be:", h.Checksum, ", Current:", curChecksum)
-	// 	return
-	// }
+	// 1. Validity
+	// (1) Is checksum in header valid
+	prevChecksum := h.Checksum
+	// we need to set checksum back to 0 before computing the current checksum
+	h.Checksum = 0
+	hBytes, err := h.Marshal()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	curChecksum := int(proto.ComputeChecksum(hBytes))
+	if prevChecksum != curChecksum {
+		fmt.Println("Should be:", h.Checksum, ", Current:", curChecksum)
+		fmt.Println("Receive:", h)
+		return
+	}
+	// (2) Check if TTL == 0
+	if h.TTL == 0 {
+		return
+	}
 	// HandleRIPResp or HandleTest
 	switch h.Protocol {
 	case 200:
@@ -174,7 +189,6 @@ func (node *Node) HandleRIPResp(bytes []byte) {
 	for i := 0; i < int(num_entries); i++ {
 		entry := rip.Body.Entries[i]
 		// fmt.Println(entry)
-		// if entry.cost == 16, sending back -> ignore
 		if entry.Cost == 16 {
 			continue
 		}
@@ -259,21 +273,6 @@ func (node *Node) HandleTest(bytes []byte) {
 	destIP := test.Header.Dst.String()
 	msg := string(test.Body)
 	ttl := test.Header.TTL
-	// 1. Validity
-	// (1) Is checksum in header valid?
-	// h, err := ipv4.ParseHeader(bytes[:20])
-	// if err != nil {
-	// 	log.Fatalln("Parse Header", err)
-	// }
-	// curChecksum := int(proto.ComputeChecksum(bytes[:20]))
-	// if h.Checksum != curChecksum {
-	// 	fmt.Println("Should be:", h.Checksum, ", Current:", curChecksum)
-	// 	return
-	// }
-	// (2) Is ttl == 0 ?
-	if ttl == 0 {
-		return
-	}
 
 	// 2. Forwarding
 	// (1) Does this packet belong to me?
@@ -288,7 +287,7 @@ func (node *Node) HandleTest(bytes []byte) {
 		return
 	}
 	// (2) Does packet match any IF in the forwarding table?
-	if route, ok := node.DestIP2Route[destIP]; ok {
+	if route, ok := node.DestIP2Route[destIP]; ok && route.Cost != 16 {
 		// Choose the link whose IPRemote == nextIP to send
 		for _, li := range node.ID2Interface {
 			if li.IPRemote == route.Next {
@@ -296,6 +295,7 @@ func (node *Node) HandleTest(bytes []byte) {
 				test := proto.NewPktTest(srcIP, destIP, msg, ttl-1)
 				bytes := test.Marshal()
 				li.SendPacket(bytes)
+				return
 			}
 		}
 	}

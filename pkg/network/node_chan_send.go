@@ -77,6 +77,7 @@ func (node *Node) ScanClI() {
 				}
 				msg := line[len(ws[0])+len(ws[1])+len(ws[2])+3:]
 				// fmt.Println(msg)
+				// cli := proto.NewNodeCLI(proto.TypeSendPacket, 0, []byte{}, destIP, protoID, msg)
 				cli := proto.NewNodeCLI(proto.TypeSendPacket, 0, []byte{}, destIP, protoID, msg)
 				node.NodeCLIChan <- cli
 			} else {

@@ -69,6 +69,7 @@ func NewRIPHeader(IPLocal, IPRemote string, bodyLen int) *ipv4.Header {
 		Checksum: 0,
 		Src:      net.ParseIP(IPLocal),
 		Dst:      net.ParseIP(IPRemote),
+		Options:  []byte{},
 	}
 	return header
 }
@@ -130,9 +131,7 @@ func UnmarshalRIPBody(bytes []byte) *RIPBody {
 }
 
 func ComputeChecksum(b []byte) uint16 {
-	// fmt.Println(b)
 	checksum := header.Checksum(b, 0)
-	// fmt.Println(checksum)
 	// Invert the checksum value.  Why is this necessary?
 	// The checksum function in the library we're using seems
 	// to have been built to plug into some other software that expects
@@ -140,7 +139,6 @@ func ComputeChecksum(b []byte) uint16 {
 	// The reasons for this are unclear to me at the moment, but for now
 	// take my word for it.  =)
 	checksumInv := checksum ^ 0xffff
-	// fmt.Println(checksumInv)
 	return checksumInv
 }
 
