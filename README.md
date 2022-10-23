@@ -83,7 +83,9 @@ kill process
 ```
 sudo install lsof
 
-sudo lsof -i -P -n | grep 17001
+sudo lsof -i -P -n | grep 17001 (get process who's listening on 17001)
+
+kill + pid
 ```
 
 
@@ -93,67 +95,6 @@ cound lines in a dir
 ```shell
 git ls-files | xargs cat | wc -l
 ```
-
-
-
-## Loop Test
-
-net 2 inx
-
-```shell
-./tools/net2lnx nets/loop.net
-```
-
-
-
-build 6 ref nodes
-
-```shell
-./tools/ref_node src.lnx
-
-./tools/ref_node srcR.lnx
-
-./tools/ref_node short.lnx
-
-./tools/ref_node long1.lnx
-
-./tools/ref_node long2.lnx
-
-./tools/ref_node dstR.lnx
-
-./tools/ref_node dst.lnx
-```
-
-
-
-build 6 self-designed node
-
-```shell
-./node src.lnx
-
-./node srcR.lnx
-
-./node short.lnx
-
-./node long1.lnx
-
-./node long2.lnx
-
-./node dstR.lnx
-
-./node dst.lnx
-```
-
-
-
-src sends a packet to dst
-
-```shell
-#A send to C
-send 192.168.0.14 0 Hello from src
-```
-
-
 
 
 
@@ -375,3 +316,34 @@ Why two packets received when sending to itself
 # Questions
 
 Assume A has 2 links, if 10.0.0.10 is down but B is trying to send a test packet fo 10.0.0.10 and it can reach another IP port 10.0.0.11. In this case, does A receive this packet?
+
+
+
+1.how to get signal that the neighbor node is down very fast? 
+
+ref_node gets the right answer very quickly
+
+
+
+2.previously I just remove destIP from routes, but I think we need to set cost to infinity and broadcast it to neighbors so others can know it is dead. The reason why updated trigger and sending back can be done in the same protocol is that There are two meanings cost == 16:
+
+(1) a server is dead for updated trigger => update the cost
+
+(2) send back to the source => ignore
+
+
+
+3.how to deal with metadata
+
+(1) set cost of corresponding routes to 16,, do not show it in `lr` any packet though that route
+
+(2) wait it to expire
+
+```go
+delete(node.RemoteDest2ExTime, destIP)
+delete(node.RemoteDestIP2Cost, destIP)
+delete(node.RemoteDestIP2SrcIP, destIP)
+```
+
+
+

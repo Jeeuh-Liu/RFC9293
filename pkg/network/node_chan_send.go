@@ -104,7 +104,7 @@ func (node *Node) RIPReqDaemon() {
 // Send NodeEx
 func (node *Node) SendExTimeCLI(destIP string) {
 	// sleep 12 second and check whether the time expires
-	time.Sleep(12 * time.Second)
+	time.Sleep(13 * time.Second)
 	cli := proto.NewNodeEx(proto.TypeRouteEx, 0, []byte{}, destIP, 0, "")
 	node.NodeExChan <- cli
 }

@@ -2,7 +2,6 @@ package link
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"tcpip/pkg/proto"
 )
@@ -46,10 +45,8 @@ func (li *LinkInterface) ServeLink() {
 		// if the sourceAddr does not belong to this link, abandon it directly
 		destAddr := sourceAddr.String()
 		// send a CLI to handle packet
-		go func(Bytes []byte) {
-			nodePktOp := proto.NewNodePktOp(proto.TypeReceivePacket, 0, CopyByteSlice(Bytes, bnum), destAddr, 0, "")
-			li.NodePktOpChan <- nodePktOp
-		}(bytes)
+		nodePktOp := proto.NewNodePktOp(proto.TypeReceivePacket, 0, CopyByteSlice(bytes, bnum), destAddr, 0, "")
+		li.NodePktOpChan <- nodePktOp
 	}
 }
 
@@ -67,17 +64,20 @@ func (li *LinkInterface) IsUp() bool {
 
 // ****************************************************************************
 // Send bytes through link
-func (li *LinkInterface) SendPacket(packetBytes []byte) {
+func (li *LinkInterface) SendPacket(packetBytes []byte) bool {
 	// fmt.Printf("Link try to send a RIP to %v through port %v\n", li.MACRemote, li.MACRemote)
 	// fmt.Printf("Link whose remote port is %v 's status is %v\n", li.MACRemote, li.Status)
 	remoteAddr, err := net.ResolveUDPAddr("udp", li.MACRemote)
 	if err != nil {
-		log.Fatalln(err)
+		// log.Fatalln(err)
+		return false
 	}
 	// bnum, err := li.LinkConn.WriteToUDP(packetBytes, remoteAddr)
 	_, err = li.LinkConn.WriteToUDP(packetBytes, remoteAddr)
 	if err != nil {
-		log.Fatalln("sendRIP", err)
+		// log.Fatalln("sendRIP", err)
+		return false
 	}
+	return true
 	// fmt.Printf("Send %v bytes\n", bnum)
 }
