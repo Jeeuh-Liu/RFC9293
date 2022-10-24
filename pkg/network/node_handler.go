@@ -109,13 +109,14 @@ func (node *Node) HandlePrintRoutesToFile(filename string) {
 }
 
 func (node *Node) HandleSendPacket(destIP string, protoID int, msg string) {
+	ttl := 1
 	if route, ok := node.DestIP2Route[destIP]; ok && route.Cost < 16 {
 		// check if route.cost == inf => unreachable
 		// Choose the link whose IPRemote == nextIP to send
 		for _, li := range node.ID2Interface {
 			if li.IPRemote == route.Next {
 				fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
-				test := proto.NewPktTest(li.IPLocal, destIP, msg, 16)
+				test := proto.NewPktTest(li.IPLocal, destIP, msg, ttl-1)
 				bytes := test.Marshal()
 				if li.SendPacket(bytes) {
 					return
@@ -218,6 +219,7 @@ func (node *Node) HandleReceivePacket(bytes []byte, destAddr string) {
 	}
 	// (2) Check if TTL == 0
 	if h.TTL == 0 {
+		fmt.Println("No enough TTL")
 		return
 	}
 	// HandleRIPResp or HandleTest
@@ -271,13 +273,20 @@ func (node *Node) HandleRIPResp(bytes []byte) {
 			}
 		}
 		// (3) If newCost > oldCost and newNextAddr == oldNextAddr, update
+		// if cost == 16 and newNextAddr == oldNextAddr => expire
 		if newCost > oldCost && newNextAddr == oldNextAddr {
 			node.UpdateRoutes(newRoute, destIP)
 			if _, ok := node.LocalIPSet[destIP]; !ok {
 				node.UpdateExTime(destIP)
 			}
 		}
+		// cost == 16
+		// Situation1: routes expires => solved in step3
+		// Situation2: send back routes => in step4
+
 		// (4) If newCost > oldCost and newNextAddr != oldNextAddr, ignore
+		// if cost != 16 and newCost > old and newNextAddr != oldNextAddr => worse route => ignore
+		// if cost == 16 and newCost > old and newNextAddr != oldNextAddr => send back => ignore
 		if newCost > oldCost && newNextAddr != oldNextAddr {
 			continue
 		}
