@@ -1,5 +1,7 @@
 # Loop Test
 
+## Build Network
+
 net 2 inx
 
 ```shell
@@ -8,7 +10,7 @@ net 2 inx
 
 
 
-build 6 ref nodes
+### build 6 ref nodes
 
 ```shell
 ./tools/ref_node src.lnx
@@ -30,7 +32,7 @@ build 6 ref nodes
 
 
 
-## build 6 self-designed node
+### build 6 self-designed node
 
 ```shell
 ./node src.lnx
@@ -49,6 +51,32 @@ build 6 ref nodes
 
 ./node dst.lnx
 ```
+
+
+
+### build net with nodes of integrated types
+
+```shell
+./node src.lnx
+
+./node srcR.lnx
+
+./node long1.lnx
+
+#short can be open in another window
+./node short.lnx
+# ----------------------------------
+
+./tools/ref_node long2.lnx
+
+./tools/ref_node dstR.lnx
+
+./tools/ref_node dst.lnx
+```
+
+
+
+
 
 
 
@@ -88,6 +116,33 @@ build 6 ref nodes
     192.168.0.7     192.168.0.2    1                                       │
     192.168.0.9     192.168.0.2    2                                       │
    192.168.0.13     192.168.0.2    3
+```
+
+
+
+## Down
+
+short down 4
+
+```shell
+# src can still reach short 
+# src -> srcR -> long1 -> long2 -> dstR -> short
+
+# [dst, short].14 .5 => 5
+# [dstR].6 & .12 & .13 => 4
+# [long2].10 & 11 => 3
+# [long1].8 & .9 => 2
+# [srcR].2 & .3 & .7 => 1
+# [src].1 => 0
+```
+
+
+
+## Up
+
+```shell
+# ask the short node to up its link 0
+up 0
 ```
 
 
@@ -164,54 +219,10 @@ Afterwards, we check the routing tables
 
 ## restart short
 
-
-
-## Down
-
-short down 4
-
-```shell
-# src can still reach short 
-# src -> srcR -> long1 -> long2 -> dstR -> short
-
-# [dst, short].14 .5 => 5
-# [dstR].6 & .12 & .13 => 4
-# [long2].10 & 11 => 3
-# [long1].8 & .9 => 2
-# [srcR].2 & .3 & .7 => 1
-# [src].1 => 0
-```
-
-
-
-
-
 src sends a packet to dst
 
 ```shell
 #src send a packet to dst
 send 192.168.0.14 0 Hello from src
-```
-
-
-
-## build net with integration of nodes
-
-```shell
-./node src.lnx
-
-./node srcR.lnx
-
-./node long1.lnx
-
-#short can be open in another window
-./node short.lnx
-# ----------------------------------
-
-./tools/ref_node long2.lnx
-
-./tools/ref_node dstR.lnx
-
-./tools/ref_node dst.lnx
 ```
 

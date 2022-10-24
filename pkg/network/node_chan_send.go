@@ -27,17 +27,21 @@ func (node *Node) ScanClI() {
 			// fmt.Println(ws, len(ws), ws[0])
 			if (len(ws) == 1 || len(ws) == 2) && ws[0] == "li" {
 				if len(ws) == 1 {
-					cli := proto.NewNodeCLI(proto.LI, 0, []byte{}, "", 0, "")
+					cli := proto.NewNodeCLI(proto.LI, 0, []byte{}, "", 0, "", "")
 					node.NodeCLIChan <- cli
 				} else {
 					// print li to a file
+					cli := proto.NewNodeCLI(proto.LIFILE, 0, []byte{}, "", 0, "", ws[1])
+					node.NodeCLIChan <- cli
 				}
 			} else if (len(ws) == 1 || len(ws) == 2) && ws[0] == "lr" {
 				if len(ws) == 1 {
-					cli := proto.NewNodeCLI(proto.LR, 0, []byte{}, "", 0, "")
+					cli := proto.NewNodeCLI(proto.LR, 0, []byte{}, "", 0, "", "")
 					node.NodeCLIChan <- cli
 				} else {
 					// print lr to a file
+					cli := proto.NewNodeCLI(proto.LRFILE, 0, []byte{}, "", 0, "", ws[1])
+					node.NodeCLIChan <- cli
 				}
 			} else if len(ws) == 2 && ws[0] == "up" {
 				id, err := strconv.Atoi(ws[1])
@@ -50,7 +54,7 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// open link
-				cli := proto.NewNodeCLI(uint8(proto.SetUpT), uint8(id), []byte{}, "", 0, "")
+				cli := proto.NewNodeCLI(uint8(proto.SetUpT), uint8(id), []byte{}, "", 0, "", "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 2 && ws[0] == "down" {
 				id, err := strconv.Atoi(ws[1])
@@ -63,10 +67,10 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// close link
-				cli := proto.NewNodeCLI(uint8(proto.SetDownT), uint8(id), []byte{}, "", 0, "")
+				cli := proto.NewNodeCLI(uint8(proto.SetDownT), uint8(id), []byte{}, "", 0, "", "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 1 && ws[0] == "q" {
-				cli := proto.NewNodeCLI(proto.Quit, 0, []byte{}, "", 0, "")
+				cli := proto.NewNodeCLI(proto.Quit, 0, []byte{}, "", 0, "", "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) >= 4 && ws[0] == "send" {
 				destIP := net.ParseIP(ws[1]).String()
@@ -78,7 +82,7 @@ func (node *Node) ScanClI() {
 				msg := line[len(ws[0])+len(ws[1])+len(ws[2])+3:]
 				// fmt.Println(msg)
 				// cli := proto.NewNodeCLI(proto.TypeSendPacket, 0, []byte{}, destIP, protoID, msg)
-				cli := proto.NewNodeCLI(proto.TypeSendPacket, 0, []byte{}, destIP, protoID, msg)
+				cli := proto.NewNodeCLI(proto.TypeSendPacket, 0, []byte{}, destIP, protoID, msg, "")
 				node.NodeCLIChan <- cli
 			} else {
 				fmt.Printf("Invalid command\n> ")

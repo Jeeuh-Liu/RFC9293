@@ -8,18 +8,20 @@ type NodeCLI struct {
 	// dest IP (which can be used to send packet)
 	DestIP string
 	// Send Packet
-	ProtoID int
-	Msg     string
+	ProtoID  int
+	Msg      string
+	Filename string
 }
 
-func NewNodeCLI(cliType, id uint8, bytes []byte, destIP string, protoID int, msg string) *NodeCLI {
+func NewNodeCLI(cliType, id uint8, bytes []byte, destIP string, protoID int, msg string, filename string) *NodeCLI {
 	nodeCLI := &NodeCLI{
-		CLIType: cliType,
-		ID:      id,
-		Bytes:   bytes,
-		DestIP:  destIP,
-		ProtoID: protoID,
-		Msg:     msg,
+		CLIType:  cliType,
+		ID:       id,
+		Bytes:    bytes,
+		DestIP:   destIP,
+		ProtoID:  protoID,
+		Msg:      msg,
+		Filename: filename,
 	}
 	return nodeCLI
 }

@@ -22,11 +22,32 @@ func (node *Node) HandlePrintInterfaces() {
 	}
 }
 
+func (node *Node) HandlePrintInterfacesToFile(filename string) {
+	f, err := os.Create(filename)
+	if err != nil {
+		log.Println(err)
+	}
+	defer f.Close()
+	header := fmt.Sprintf("id    state        local        remote        port\n")
+	_, err = f.WriteString(header)
+	if err != nil {
+		log.Println(err)
+	}
+	for id, li := range node.ID2Interface {
+		port := strings.Split(li.MACRemote, ":")[1]
+		line := fmt.Sprintf("%v      %v         %v     %v      %v\n", id, li.Status, li.IPLocal, li.IPRemote, port)
+		_, err = f.WriteString(line)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
+
 func (node *Node) HandleSetUp(id uint8) {
 	li := node.ID2Interface[id]
 	route := NewRoute(li.IPLocal, li.IPLocal, 0)
 	// add routes of local IP back to route table
-	node.LocalIPSet[li.IPLocal] = true
+	// node.LocalIPSet[li.IPLocal] = true
 	node.DestIP2Route[li.IPLocal] = route
 	// we do not need to handle remote routes manually
 	// change status of link
@@ -36,17 +57,16 @@ func (node *Node) HandleSetUp(id uint8) {
 func (node *Node) HandleSetDown(id uint8) {
 	li := node.ID2Interface[id]
 	// delete the routes of local IP from route table
-	delete(node.LocalIPSet, li.IPLocal)
+	// delete(node.LocalIPSet, li.IPLocal)
 	delete(node.DestIP2Route, li.IPLocal)
 	// if a remote destIP needs to use this link, delete corresponding its route and metadata
 	for destIP, route := range node.DestIP2Route {
 		if route.Next == li.IPRemote {
 			// regard this destIP as expired
+			// fmt.Println(destIP, "Del 44")
 			node.DeleteRoute(destIP)
-			// delete(node.DestIP2Route, destIP)
-			// delete(node.RemoteDest2ExTime, destIP)
-			// delete(node.RemoteDestIP2Cost, destIP)
-			// delete(node.RemoteDestIP2SrcIP, destIP)
+			entry := proto.NewEntry(16, destIP)
+			node.BroadcastRIPRespTU(entry)
 		}
 	}
 	// change status of link
@@ -62,6 +82,28 @@ func (node *Node) HandlePrintRoutes() {
 	for _, r := range node.DestIP2Route {
 		if r.Cost != 16 {
 			fmt.Printf("    %v         %v         %v\n", r.Dest, r.Next, r.Cost)
+		}
+	}
+}
+
+func (node *Node) HandlePrintRoutesToFile(filename string) {
+	f, err := os.Create(filename)
+	if err != nil {
+		log.Println(err)
+	}
+	defer f.Close()
+	header := fmt.Sprintf("    dest        	next        cost\n")
+	_, err = f.WriteString(header)
+	if err != nil {
+		log.Println(err)
+	}
+	for _, r := range node.DestIP2Route {
+		if r.Cost != 16 {
+			line := fmt.Sprintf("    %v         %v         %v\n", r.Dest, r.Next, r.Cost)
+			_, err = f.WriteString(line)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}
 }
@@ -162,7 +204,7 @@ func (node *Node) HandleReceivePacket(bytes []byte, destAddr string) {
 	// 1. Validity
 	// (1) Is checksum in header valid
 	prevChecksum := h.Checksum
-	// we need to set checksum back to 0 before computing the current checksum
+	// we need toset checksum back to 0 before computing the current checksum
 	h.Checksum = 0
 	hBytes, err := h.Marshal()
 	if err != nil {
@@ -217,25 +259,33 @@ func (node *Node) HandleRIPResp(bytes []byte) {
 		// (1) If no existing , update
 		if _, ok := node.RemoteDestIP2Cost[destIP]; !ok {
 			node.UpdateRoutes(newRoute, destIP)
-			node.UpdateExTime(destIP)
+			if _, ok := node.LocalIPSet[destIP]; !ok {
+				node.UpdateExTime(destIP)
+			}
 		}
 		// (2) If newCost < oldCost, update
 		if newCost < oldCost {
 			node.UpdateRoutes(newRoute, destIP)
-			node.UpdateExTime(destIP)
+			if _, ok := node.LocalIPSet[destIP]; !ok {
+				node.UpdateExTime(destIP)
+			}
 		}
 		// (3) If newCost > oldCost and newNextAddr == oldNextAddr, update
 		if newCost > oldCost && newNextAddr == oldNextAddr {
 			node.UpdateRoutes(newRoute, destIP)
-			node.UpdateExTime(destIP)
+			if _, ok := node.LocalIPSet[destIP]; !ok {
+				node.UpdateExTime(destIP)
+			}
 		}
 		// (4) If newCost > oldCost and newNextAddr != oldNextAddr, ignore
 		if newCost > oldCost && newNextAddr != oldNextAddr {
 			continue
 		}
-		// (5) If newCost == oldCost, reset the expire time
+		// (5) If newCost == oldCost, reset the expire time (done)
 		if newCost == oldCost {
-			node.UpdateExTime(destIP)
+			if _, ok := node.LocalIPSet[destIP]; !ok {
+				node.UpdateExTime(destIP)
+			}
 		}
 	}
 }
@@ -248,6 +298,7 @@ func (node *Node) UpdateRoutes(newRoute Route, destIP string) {
 	node.RemoteDestIP2SrcIP[destIP] = newRoute.Next
 	// if new cost == 16, it means that destIP has dead -> regard it as expired
 	if newRoute.Cost == 16 {
+		// fmt.Println(destIP, "Del 256")
 		node.DeleteRoute(destIP)
 	}
 	// Broadcast RIP Resp because of Triggered Updates
@@ -264,7 +315,7 @@ func (node *Node) UpdateExTime(destIP string) {
 // Handle Expired Route
 func (node *Node) HandleRouteEx(destIP string) {
 	if time.Now().After(node.RemoteDest2ExTime[destIP]) {
-		// fmt.Println(destIP, "Expired!")
+		// fmt.Println(destIP, "Del 275")
 		node.DeleteRoute(destIP)
 		// broadcast the deleted entry
 		entry := proto.NewEntry(16, destIP)
@@ -273,7 +324,9 @@ func (node *Node) HandleRouteEx(destIP string) {
 }
 
 func (node *Node) DeleteRoute(destIP string) {
+	// delete route
 	delete(node.DestIP2Route, destIP)
+	// delete metadata
 	delete(node.RemoteDest2ExTime, destIP)
 	delete(node.RemoteDestIP2Cost, destIP)
 	delete(node.RemoteDestIP2SrcIP, destIP)

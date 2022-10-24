@@ -47,6 +47,12 @@ func (node *Node) HandleNodeCLI(nodeCLI *proto.NodeCLI) {
 	case proto.TypeSendPacket:
 		node.HandleSendPacket(nodeCLI.DestIP, nodeCLI.ProtoID, nodeCLI.Msg)
 		fmt.Printf("> ")
+	case proto.LIFILE:
+		node.HandlePrintInterfacesToFile(nodeCLI.Filename)
+		fmt.Printf("> ")
+	case proto.LRFILE:
+		node.HandlePrintRoutesToFile(nodeCLI.Filename)
+		fmt.Printf("> ")
 	}
 }
 
