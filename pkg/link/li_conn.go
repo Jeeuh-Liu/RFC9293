@@ -64,20 +64,20 @@ func (li *LinkInterface) IsUp() bool {
 
 // ****************************************************************************
 // Send bytes through link
-func (li *LinkInterface) SendPacket(packetBytes []byte) bool {
+func (li *LinkInterface) SendPacket(packetBytes []byte) {
 	// fmt.Printf("Link try to send a RIP to %v through port %v\n", li.MACRemote, li.MACRemote)
 	// fmt.Printf("Link whose remote port is %v 's status is %v\n", li.MACRemote, li.Status)
 	remoteAddr, err := net.ResolveUDPAddr("udp", li.MACRemote)
 	if err != nil {
 		// log.Fatalln(err)
-		return false
+		return
 	}
 	// bnum, err := li.LinkConn.WriteToUDP(packetBytes, remoteAddr)
 	_, err = li.LinkConn.WriteToUDP(packetBytes, remoteAddr)
 	if err != nil {
 		// log.Fatalln("sendRIP", err)
-		return false
+		return
 	}
-	return true
+	return
 	// fmt.Printf("Send %v bytes\n", bnum)
 }

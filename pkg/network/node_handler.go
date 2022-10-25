@@ -118,9 +118,7 @@ func (node *Node) HandleSendPacket(destIP string, protoID int, msg string) {
 				fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
 				test := proto.NewPktTest(li.IPLocal, destIP, msg, ttl-1)
 				bytes := test.Marshal()
-				if li.SendPacket(bytes) {
-					return
-				}
+				li.SendPacket(bytes)
 			}
 		}
 	}
@@ -138,9 +136,7 @@ func (node *Node) HandleBroadcastRIPReq() {
 		entries := []proto.Entry{}
 		rip := proto.NewPktRIP(li.IPLocal, li.IPRemote, 1, entries)
 		bytes := rip.Marshal()
-		if !li.SendPacket(bytes) {
-			fmt.Println("This link is not alive")
-		}
+		li.SendPacket(bytes)
 	}
 }
 

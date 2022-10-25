@@ -64,7 +64,7 @@ net 2 inx
 ./node long1.lnx
 
 #short can be open in another window
-./node short.ln
+./node short.lnx
 # ----------------------------------
 
 ./tools/ref_node long2.lnx
@@ -96,26 +96,11 @@ net 2 inx
 192.168.0.4     192.168.0.4    0
 
 #lr of src
-# 4 
-# 3
-# 2 
-# 1
-# 0
-           dest            next cost                                    
-    192.168.0.6     192.168.0.2    3                                       │
-   192.168.0.14     192.168.0.2    4                                       │
-    192.168.0.1     192.168.0.1    0                                       │
-    192.168.0.2     192.168.0.2    1                                       │
-    192.168.0.5     192.168.0.2    2                                       │
-   192.168.0.10     192.168.0.2    2                                       │
-    192.168.0.8     192.168.0.2    2                                       │
-   192.168.0.11     192.168.0.2    2                                       │
-   192.168.0.12     192.168.0.2    3                                       │
-    192.168.0.4     192.168.0.2    2                                       │
-    192.168.0.3     192.168.0.2    1                                       │
-    192.168.0.7     192.168.0.2    1                                       │
-    192.168.0.9     192.168.0.2    2                                       │
-   192.168.0.13     192.168.0.2    3
+# [dst].14 => 4
+# [dstR].6 & .12 &.13 => 3
+# [long2].10 & .11 => 2
+# [src, long1].1 & .8 & .9 => 1
+# [srcR].2 & .3 & .7 => 0
 ```
 
 
@@ -224,24 +209,5 @@ src sends a packet to dst
 ```shell
 #src send a packet to dst
 send 192.168.0.14 0 Hello from src
-
-#dst send a packet to src
-send 192.168.0.1 0 Hello from src
 ```
-
-
-
-
-
-kill process
-
-```shell
-sudo install lsof
-#(get process who's listening on 17001)
-sudo lsof -i -P -n | grep 17001 
-
-kill + pid
-```
-
-
 

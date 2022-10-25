@@ -123,6 +123,6 @@ func (node *Node) BroadcastRIPRespTU(entity proto.Entry) {
 		entries = append(entries, entity)
 		rip := proto.NewPktRIP(li.IPLocal, li.IPRemote, 2, entries)
 		bytes := rip.Marshal()
-		li.SendPacket(bytes)
+		go li.SendPacket(bytes)
 	}
 }
