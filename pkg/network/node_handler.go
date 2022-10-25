@@ -119,6 +119,7 @@ func (node *Node) HandleSendPacket(destIP string, protoID int, msg string) {
 				test := proto.NewPktTest(li.IPLocal, destIP, msg, ttl-1)
 				bytes := test.Marshal()
 				li.SendPacket(bytes)
+				return
 			}
 		}
 	}
@@ -257,24 +258,18 @@ func (node *Node) HandleRIPResp(bytes []byte) {
 		// (1) If no existing , update
 		if _, ok := node.RemoteDestIP2Cost[destIP]; !ok {
 			node.UpdateRoutes(newRoute, destIP)
-			if _, ok := node.LocalIPSet[destIP]; !ok {
-				node.UpdateExTime(destIP)
-			}
+			node.UpdateExTime(destIP)
 		}
 		// (2) If newCost < oldCost, update
 		if newCost < oldCost {
 			node.UpdateRoutes(newRoute, destIP)
-			if _, ok := node.LocalIPSet[destIP]; !ok {
-				node.UpdateExTime(destIP)
-			}
+			node.UpdateExTime(destIP)
 		}
 		// (3) If newCost > oldCost and newNextAddr == oldNextAddr, update
 		// if cost == 16 and newNextAddr == oldNextAddr => expire
 		if newCost > oldCost && newNextAddr == oldNextAddr {
 			node.UpdateRoutes(newRoute, destIP)
-			if _, ok := node.LocalIPSet[destIP]; !ok {
-				node.UpdateExTime(destIP)
-			}
+			node.UpdateExTime(destIP)
 		}
 		// cost == 16
 		// Situation1: routes expires => solved in step3
@@ -288,9 +283,7 @@ func (node *Node) HandleRIPResp(bytes []byte) {
 		}
 		// (5) If newCost == oldCost, reset the expire time (done)
 		if newCost == oldCost {
-			if _, ok := node.LocalIPSet[destIP]; !ok {
-				node.UpdateExTime(destIP)
-			}
+			node.UpdateExTime(destIP)
 		}
 	}
 }
@@ -356,7 +349,7 @@ func (node *Node) HandleTest(bytes []byte) {
 	destIP := test.Header.Dst.String()
 	msg := string(test.Body)
 	ttl := test.Header.TTL
-
+	fmt.Println("Get one test packet")
 	// 2. Forwarding
 	// (1) Does this packet belong to me?
 	if _, ok := node.LocalIPSet[destIP]; ok {
@@ -370,7 +363,7 @@ func (node *Node) HandleTest(bytes []byte) {
 		return
 	}
 	// (2) Does packet match any route in the forwarding table?
-	if route, ok := node.DestIP2Route[destIP]; ok && route.Cost != 16 {
+	if route, ok := node.DestIP2Route[destIP]; ok {
 		// Choose the link whose IPRemote == nextIP to send
 		for _, li := range node.ID2Interface {
 			if li.IPRemote == route.Next {
