@@ -45,7 +45,7 @@ func (li *LinkInterface) ServeLink() {
 		// if the sourceAddr does not belong to this link, abandon it directly
 		destAddr := sourceAddr.String()
 		// send a CLI to handle packet
-		nodePktOp := proto.NewNodePktOp(proto.TypeReceivePacket, 0, CopyByteSlice(bytes, bnum), destAddr, 0, "")
+		nodePktOp := proto.NewNodePktOp(proto.MESSAGE_REVPKT, 0, CopyByteSlice(bytes, bnum), destAddr, 0, "")
 		li.NodePktOpChan <- nodePktOp
 	}
 }

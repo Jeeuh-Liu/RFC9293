@@ -210,6 +210,9 @@ src sends a packet to dst
 #src send a packet to dst
 send 192.168.0.14 0 Hello from src
 
+#src send a packet to .5 port of short
+send 192.168.0.5 0 Hello from src
+
 #src send a packet to dst
 send 192.168.0.1 0 Hello from dst
 ```

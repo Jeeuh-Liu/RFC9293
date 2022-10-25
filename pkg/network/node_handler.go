@@ -45,10 +45,13 @@ func (node *Node) HandlePrintInterfacesToFile(filename string) {
 
 func (node *Node) HandleSetUp(id uint8) {
 	li := node.ID2Interface[id]
-	route := NewRoute(li.IPLocal, li.IPLocal, 0)
+	// route := NewRoute(li.IPLocal, li.IPLocal, 0)
 	// add routes of local IP back to route table
 	// node.LocalIPSet[li.IPLocal] = true
-	node.DestIP2Route[li.IPLocal] = route
+	// node.DestIP2Route[li.IPLocal] = route
+
+	newRoute := NewRoute(li.IPLocal, li.IPLocal, 0)
+	node.UpdateRoutes(newRoute, li.IPLocal)
 	// we do not need to handle remote routes manually
 	// change status of link
 	node.ID2Interface[uint8(id)].OpenRemoteLink()
@@ -58,15 +61,22 @@ func (node *Node) HandleSetDown(id uint8) {
 	li := node.ID2Interface[id]
 	// delete the routes of local IP from route table
 	// delete(node.LocalIPSet, li.IPLocal)
-	delete(node.DestIP2Route, li.IPLocal)
+
+	// delete(node.DestIP2Route, li.IPLocal)
+	newRoute := NewRoute(li.IPLocal, li.IPLocal, 16)
+	node.UpdateRoutes(newRoute, li.IPLocal)
+
 	// if a remote destIP needs to use this link, delete corresponding its route and metadata
 	for destIP, route := range node.DestIP2Route {
 		if route.Next == li.IPRemote {
 			// regard this destIP as expired
 			// fmt.Println(destIP, "Del 44")
-			node.DeleteRoute(destIP)
-			entry := proto.NewEntry(16, destIP)
-			node.BroadcastRIPRespTU(entry)
+			// node.DeleteRoute(destIP)
+			newRoute.Cost = 16
+			node.UpdateRoutes(newRoute, destIP)
+
+			// entry := proto.NewEntry(16, destIP)
+			// node.BroadcastRIPRespTU(entry)
 		}
 	}
 	// change status of link
@@ -248,15 +258,15 @@ func (node *Node) HandleRIPResp(bytes []byte) {
 		oldCost := node.DestIP2Route[destIP].Cost
 		oldNextAddr := node.DestIP2Route[destIP].Dest
 		var newCost uint32
+		newNextAddr := rip.Header.Src.String()
 		if entry.Cost == 16 {
 			newCost = 16
 		} else {
 			newCost = entry.Cost + 1
 		}
-		newNextAddr := rip.Header.Src.String()
 		newRoute := NewRoute(destIP, newNextAddr, newCost)
 		// (1) If no existing route and cost != 16 , update
-		if _, ok := node.RemoteDestIP2Cost[destIP]; !ok && newCost != 16 {
+		if _, ok := node.RemoteDestIP2Cost[destIP]; !ok {
 			node.UpdateRoutes(newRoute, destIP)
 			node.UpdateExTime(destIP)
 		}
@@ -295,10 +305,11 @@ func (node *Node) UpdateRoutes(newRoute Route, destIP string) {
 	node.RemoteDestIP2Cost[destIP] = newRoute.Cost
 	node.RemoteDestIP2SrcIP[destIP] = newRoute.Next
 	// if new cost == 16, it means that destIP has dead -> regard it as expired
-	if newRoute.Cost == 16 {
-		// fmt.Println(destIP)
-		node.DeleteRoute(destIP)
-	}
+	// if newRoute.Cost == 16 {
+	// 	// fmt.Println(destIP)
+	// 	// node.DeleteRoute(destIP)
+	// 	return
+	// }
 	// Broadcast RIP Resp because of Triggered Updates
 	entry := proto.NewEntry(newRoute.Cost, newRoute.Dest)
 	node.BroadcastRIPRespTU(entry)
@@ -314,10 +325,13 @@ func (node *Node) UpdateExTime(destIP string) {
 func (node *Node) HandleRouteEx(destIP string) {
 	if time.Now().After(node.RemoteDest2ExTime[destIP]) {
 		// fmt.Println(destIP, "Del 275")
-		node.DeleteRoute(destIP)
+		// node.DeleteRoute(destIP)
+		newRoute := node.DestIP2Route[destIP]
+		newRoute.Cost = 16
+		node.UpdateRoutes(newRoute, destIP)
 		// broadcast the deleted entry
-		entry := proto.NewEntry(16, destIP)
-		node.BroadcastRIPRespTU(entry)
+		// entry := proto.NewEntry(16, destIP)
+		// node.BroadcastRIPRespTU(entry)
 	}
 }
 
@@ -363,7 +377,7 @@ func (node *Node) HandleTest(bytes []byte) {
 		return
 	}
 	// (2) Does packet match any route in the forwarding table?
-	if route, ok := node.DestIP2Route[destIP]; ok {
+	if route, ok := node.DestIP2Route[destIP]; ok && route.Cost < 16 {
 		// Choose the link whose IPRemote == nextIP to send
 		for _, li := range node.ID2Interface {
 			if li.IPRemote == route.Next {

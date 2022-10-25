@@ -27,20 +27,20 @@ func (node *Node) ScanClI() {
 			// fmt.Println(ws, len(ws), ws[0])
 			if (len(ws) == 1 || len(ws) == 2) && ws[0] == "li" {
 				if len(ws) == 1 {
-					cli := proto.NewNodeCLI(proto.LI, 0, []byte{}, "", 0, "", "")
+					cli := proto.NewNodeCLI(proto.CLI_LI, 0, []byte{}, "", 0, "", "")
 					node.NodeCLIChan <- cli
 				} else {
 					// print li to a file
-					cli := proto.NewNodeCLI(proto.LIFILE, 0, []byte{}, "", 0, "", ws[1])
+					cli := proto.NewNodeCLI(proto.CLI_LIFILE, 0, []byte{}, "", 0, "", ws[1])
 					node.NodeCLIChan <- cli
 				}
 			} else if (len(ws) == 1 || len(ws) == 2) && ws[0] == "lr" {
 				if len(ws) == 1 {
-					cli := proto.NewNodeCLI(proto.LR, 0, []byte{}, "", 0, "", "")
+					cli := proto.NewNodeCLI(proto.CLI_LR, 0, []byte{}, "", 0, "", "")
 					node.NodeCLIChan <- cli
 				} else {
 					// print lr to a file
-					cli := proto.NewNodeCLI(proto.LRFILE, 0, []byte{}, "", 0, "", ws[1])
+					cli := proto.NewNodeCLI(proto.CLI_LRFILE, 0, []byte{}, "", 0, "", ws[1])
 					node.NodeCLIChan <- cli
 				}
 			} else if len(ws) == 2 && ws[0] == "up" {
@@ -54,7 +54,7 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// open link
-				cli := proto.NewNodeCLI(uint8(proto.SetUpT), uint8(id), []byte{}, "", 0, "", "")
+				cli := proto.NewNodeCLI(uint8(proto.CLI_SETUP), uint8(id), []byte{}, "", 0, "", "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 2 && ws[0] == "down" {
 				id, err := strconv.Atoi(ws[1])
@@ -67,10 +67,10 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// close link
-				cli := proto.NewNodeCLI(uint8(proto.SetDownT), uint8(id), []byte{}, "", 0, "", "")
+				cli := proto.NewNodeCLI(uint8(proto.CLI_SETDOWN), uint8(id), []byte{}, "", 0, "", "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 1 && ws[0] == "q" {
-				cli := proto.NewNodeCLI(proto.Quit, 0, []byte{}, "", 0, "", "")
+				cli := proto.NewNodeCLI(proto.CLI_QUIT, 0, []byte{}, "", 0, "", "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) >= 4 && ws[0] == "send" {
 				destIP := net.ParseIP(ws[1]).String()
@@ -81,8 +81,8 @@ func (node *Node) ScanClI() {
 				}
 				msg := line[len(ws[0])+len(ws[1])+len(ws[2])+3:]
 				// fmt.Println(msg)
-				// cli := proto.NewNodeCLI(proto.TypeSendPacket, 0, []byte{}, destIP, protoID, msg)
-				cli := proto.NewNodeCLI(proto.TypeSendPacket, 0, []byte{}, destIP, protoID, msg, "")
+				// cli := proto.NewNodeCLI(proto.MESSAGE_SENDPKT, 0, []byte{}, destIP, protoID, msg)
+				cli := proto.NewNodeCLI(proto.MESSAGE_SENDPKT, 0, []byte{}, destIP, protoID, msg, "")
 				node.NodeCLIChan <- cli
 			} else {
 				fmt.Printf("Invalid command\n> ")
@@ -94,14 +94,14 @@ func (node *Node) ScanClI() {
 // Send NodeBroadcast
 func (node *Node) RIPRespDaemon() {
 	for {
-		cli := proto.NewNodeBC(proto.TypeBroadcastRIPResp, 0, []byte{}, "", 0, "")
+		cli := proto.NewNodeBC(proto.MESSAGE_BCRIPRESP, 0, []byte{}, "", 0, "")
 		node.NodeBCChan <- cli
 		time.Sleep(5 * time.Second)
 	}
 }
 
 func (node *Node) RIPReqDaemon() {
-	cli := proto.NewNodeBC(proto.TypeBroadcastRIPReq, 0, []byte{}, "", 0, "")
+	cli := proto.NewNodeBC(proto.MESSAGE_BCRIPREQ, 0, []byte{}, "", 0, "")
 	node.NodeBCChan <- cli
 }
 
@@ -109,7 +109,7 @@ func (node *Node) RIPReqDaemon() {
 func (node *Node) SendExTimeCLI(destIP string) {
 	// sleep 12 second and check whether the time expires
 	time.Sleep(13 * time.Second)
-	cli := proto.NewNodeEx(proto.TypeRouteEx, 0, []byte{}, destIP, 0, "")
+	cli := proto.NewNodeEx(proto.MESSAGE_ROUTEEX, 0, []byte{}, destIP, 0, "")
 	node.NodeExChan <- cli
 }
 

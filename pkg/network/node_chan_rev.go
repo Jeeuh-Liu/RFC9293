@@ -29,28 +29,28 @@ func (node *Node) ReceiveOpFromChan() {
 func (node *Node) HandleNodeCLI(nodeCLI *proto.NodeCLI) {
 	switch nodeCLI.CLIType {
 	// CLI
-	case proto.LI:
+	case proto.CLI_LI:
 		node.HandlePrintInterfaces()
 		fmt.Printf("> ")
-	case proto.SetUpT:
+	case proto.CLI_SETUP:
 		node.HandleSetUp(nodeCLI.ID)
 		fmt.Printf("> ")
-	case proto.SetDownT:
+	case proto.CLI_SETDOWN:
 		node.HandleSetDown(nodeCLI.ID)
 		fmt.Printf("> ")
-	case proto.Quit:
+	case proto.CLI_QUIT:
 		node.HandleQuit()
 		fmt.Printf("> ")
-	case proto.LR:
+	case proto.CLI_LR:
 		node.HandlePrintRoutes()
 		fmt.Printf("> ")
-	case proto.TypeSendPacket:
+	case proto.MESSAGE_SENDPKT:
 		node.HandleSendPacket(nodeCLI.DestIP, nodeCLI.ProtoID, nodeCLI.Msg)
 		fmt.Printf("> ")
-	case proto.LIFILE:
+	case proto.CLI_LIFILE:
 		node.HandlePrintInterfacesToFile(nodeCLI.Filename)
 		fmt.Printf("> ")
-	case proto.LRFILE:
+	case proto.CLI_LRFILE:
 		node.HandlePrintRoutesToFile(nodeCLI.Filename)
 		fmt.Printf("> ")
 	}
@@ -58,23 +58,23 @@ func (node *Node) HandleNodeCLI(nodeCLI *proto.NodeCLI) {
 
 func (node *Node) HandleNodeBC(nodeBC *proto.NodeBC) {
 	switch nodeBC.OpType {
-	case proto.TypeBroadcastRIPReq:
+	case proto.MESSAGE_BCRIPREQ:
 		node.HandleBroadcastRIPReq()
-	case proto.TypeBroadcastRIPResp:
+	case proto.MESSAGE_BCRIPRESP:
 		node.HandleBroadcastRIPResp()
 	}
 }
 
 func (node *Node) HandleNodeEx(nodeEx *proto.NodeEx) {
 	switch nodeEx.OpType {
-	case proto.TypeRouteEx:
+	case proto.MESSAGE_ROUTEEX:
 		node.HandleRouteEx(nodeEx.DestIP)
 	}
 }
 
 func (node *Node) HandleNodePktOp(nodePktOp *proto.NodePktOp) {
 	switch nodePktOp.OpType {
-	case proto.TypeReceivePacket:
+	case proto.MESSAGE_REVPKT:
 		node.HandleReceivePacket(nodePktOp.Bytes.([]byte), nodePktOp.DestIP)
 	}
 }
