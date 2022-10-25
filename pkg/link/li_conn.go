@@ -78,6 +78,5 @@ func (li *LinkInterface) SendPacket(packetBytes []byte) {
 		// log.Fatalln("sendRIP", err)
 		return
 	}
-	return
 	// fmt.Printf("Send %v bytes\n", bnum)
 }
