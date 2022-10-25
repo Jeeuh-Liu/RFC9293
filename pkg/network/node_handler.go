@@ -373,7 +373,7 @@ func (node *Node) HandleTest(bytes []byte) {
 		fmt.Printf("----------------------------\n")
 		return
 	}
-	// (2) Does packet match any IF in the forwarding table?
+	// (2) Does packet match any route in the forwarding table?
 	if route, ok := node.DestIP2Route[destIP]; ok && route.Cost != 16 {
 		// Choose the link whose IPRemote == nextIP to send
 		for _, li := range node.ID2Interface {
