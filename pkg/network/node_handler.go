@@ -255,8 +255,8 @@ func (node *Node) HandleRIPResp(bytes []byte) {
 		}
 		newNextAddr := rip.Header.Src.String()
 		newRoute := NewRoute(destIP, newNextAddr, newCost)
-		// (1) If no existing , update
-		if _, ok := node.RemoteDestIP2Cost[destIP]; !ok {
+		// (1) If no existing route and cost != 16 , update
+		if _, ok := node.RemoteDestIP2Cost[destIP]; !ok && newCost != 16 {
 			node.UpdateRoutes(newRoute, destIP)
 			node.UpdateExTime(destIP)
 		}
@@ -296,7 +296,7 @@ func (node *Node) UpdateRoutes(newRoute Route, destIP string) {
 	node.RemoteDestIP2SrcIP[destIP] = newRoute.Next
 	// if new cost == 16, it means that destIP has dead -> regard it as expired
 	if newRoute.Cost == 16 {
-		// fmt.Println(destIP, "Del 256")
+		// fmt.Println(destIP)
 		node.DeleteRoute(destIP)
 	}
 	// Broadcast RIP Resp because of Triggered Updates
