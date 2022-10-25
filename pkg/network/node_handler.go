@@ -45,38 +45,24 @@ func (node *Node) HandlePrintInterfacesToFile(filename string) {
 
 func (node *Node) HandleSetUp(id uint8) {
 	li := node.ID2Interface[id]
-	// route := NewRoute(li.IPLocal, li.IPLocal, 0)
-	// add routes of local IP back to route table
-	// node.LocalIPSet[li.IPLocal] = true
-	// node.DestIP2Route[li.IPLocal] = route
-
+	// set routes of local IP back to 0
 	newRoute := NewRoute(li.IPLocal, li.IPLocal, 0)
 	node.UpdateRoutes(newRoute, li.IPLocal)
-	// we do not need to handle remote routes manually
 	// change status of link
 	node.ID2Interface[uint8(id)].OpenRemoteLink()
 }
 
 func (node *Node) HandleSetDown(id uint8) {
 	li := node.ID2Interface[id]
-	// delete the routes of local IP from route table
-	// delete(node.LocalIPSet, li.IPLocal)
-
-	// delete(node.DestIP2Route, li.IPLocal)
+	// set routes of local IP to infinity
 	newRoute := NewRoute(li.IPLocal, li.IPLocal, 16)
 	node.UpdateRoutes(newRoute, li.IPLocal)
-
 	// if a remote destIP needs to use this link, delete corresponding its route and metadata
 	for destIP, route := range node.DestIP2Route {
 		if route.Next == li.IPRemote {
 			// regard this destIP as expired
-			// fmt.Println(destIP, "Del 44")
-			// node.DeleteRoute(destIP)
 			newRoute.Cost = 16
 			node.UpdateRoutes(newRoute, destIP)
-
-			// entry := proto.NewEntry(16, destIP)
-			// node.BroadcastRIPRespTU(entry)
 		}
 	}
 	// change status of link
@@ -141,9 +127,9 @@ func (node *Node) HandleSendPacket(destIP string, protoID int, msg string) {
 func (node *Node) HandleBroadcastRIPReq() {
 	// fmt.Println("Try to broadcast RIP Req")
 	for _, li := range node.ID2Interface {
-		// if !li.IsUp() {
-		// 	continue
-		// }
+		if !li.IsUp() {
+			continue
+		}
 		entries := []proto.Entry{}
 		rip := proto.NewPktRIP(li.IPLocal, li.IPRemote, 1, entries)
 		bytes := rip.Marshal()
@@ -192,8 +178,7 @@ func (node *Node) HandleReceivePacket(bytes []byte, destAddr string) {
 	}
 	if !canMatch || !isAlive {
 		// link to is down but link from is still up
-		// fmt.Printf("%v does not match and be alive\n", destAddr)
-		// fmt.Println(node.RemoteDest2ExTime[destAddr])
+		// fmt.Printf("%v receive a msg from dead link\n", destAddr)
 		return
 	}
 	// check length of bytes
@@ -276,7 +261,7 @@ func (node *Node) HandleRIPResp(bytes []byte) {
 			node.UpdateExTime(destIP)
 		}
 		// (3) If newCost > oldCost and newNextAddr == oldNextAddr, update
-		// if cost == 16 and newNextAddr == oldNextAddr => expire
+		// if cost == 16 and newNextAddr == oldNextAddr => expired
 		if newCost > oldCost && newNextAddr == oldNextAddr {
 			node.UpdateRoutes(newRoute, destIP)
 			node.UpdateExTime(destIP)
@@ -304,12 +289,6 @@ func (node *Node) UpdateRoutes(newRoute Route, destIP string) {
 	// update the metadata
 	node.RemoteDestIP2Cost[destIP] = newRoute.Cost
 	node.RemoteDestIP2SrcIP[destIP] = newRoute.Next
-	// if new cost == 16, it means that destIP has dead -> regard it as expired
-	// if newRoute.Cost == 16 {
-	// 	// fmt.Println(destIP)
-	// 	// node.DeleteRoute(destIP)
-	// 	return
-	// }
 	// Broadcast RIP Resp because of Triggered Updates
 	entry := proto.NewEntry(newRoute.Cost, newRoute.Dest)
 	node.BroadcastRIPRespTU(entry)
@@ -325,24 +304,21 @@ func (node *Node) UpdateExTime(destIP string) {
 func (node *Node) HandleRouteEx(destIP string) {
 	if time.Now().After(node.RemoteDest2ExTime[destIP]) {
 		// fmt.Println(destIP, "Del 275")
-		// node.DeleteRoute(destIP)
 		newRoute := node.DestIP2Route[destIP]
 		newRoute.Cost = 16
 		node.UpdateRoutes(newRoute, destIP)
-		// broadcast the deleted entry
-		// entry := proto.NewEntry(16, destIP)
-		// node.BroadcastRIPRespTU(entry)
 	}
 }
 
-func (node *Node) DeleteRoute(destIP string) {
-	// delete route
-	delete(node.DestIP2Route, destIP)
-	// delete metadata
-	delete(node.RemoteDest2ExTime, destIP)
-	delete(node.RemoteDestIP2Cost, destIP)
-	delete(node.RemoteDestIP2SrcIP, destIP)
-}
+// we will not delete it
+// func (node *Node) DeleteRoute(destIP string) {
+// 	// delete route
+// 	delete(node.DestIP2Route, destIP)
+// 	// delete metadata
+// 	delete(node.RemoteDest2ExTime, destIP)
+// 	delete(node.RemoteDestIP2Cost, destIP)
+// 	delete(node.RemoteDestIP2SrcIP, destIP)
+// }
 
 func ipv4Num2str(addr uint32) string {
 	mask := 1<<8 - 1
