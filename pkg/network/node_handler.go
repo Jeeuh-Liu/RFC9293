@@ -109,7 +109,7 @@ func (node *Node) HandlePrintRoutesToFile(filename string) {
 }
 
 func (node *Node) HandleSendPacket(destIP string, protoID int, msg string) {
-	ttl := 1
+	ttl := 16
 	if route, ok := node.DestIP2Route[destIP]; ok && route.Cost < 16 {
 		// check if route.cost == inf => unreachable
 		// Choose the link whose IPRemote == nextIP to send

@@ -64,7 +64,7 @@ net 2 inx
 ./node long1.lnx
 
 #short can be open in another window
-./node short.lnx
+./node short.ln
 # ----------------------------------
 
 ./tools/ref_node long2.lnx
@@ -224,5 +224,24 @@ src sends a packet to dst
 ```shell
 #src send a packet to dst
 send 192.168.0.14 0 Hello from src
+
+#dst send a packet to src
+send 192.168.0.1 0 Hello from src
 ```
+
+
+
+
+
+kill process
+
+```shell
+sudo install lsof
+#(get process who's listening on 17001)
+sudo lsof -i -P -n | grep 17001 
+
+kill + pid
+```
+
+
 
