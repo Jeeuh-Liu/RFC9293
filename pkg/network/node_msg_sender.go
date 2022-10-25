@@ -49,7 +49,7 @@ func (node *Node) ScanClI() {
 					fmt.Printf("strconv.Atoi: parsing %v: invalid syntax\n> ", ws[1])
 					continue
 				}
-				if id >= len(node.ID2Interface) {
+				if id >= len(node.RT.ID2Interface) {
 					fmt.Printf("interface %v does not exist\n> ", id)
 					continue
 				}
@@ -62,7 +62,7 @@ func (node *Node) ScanClI() {
 					fmt.Printf("strconv.Atoi: parsing %v: invalid syntax\n> ", ws[1])
 					continue
 				}
-				if id >= len(node.ID2Interface) {
+				if id >= len(node.RT.ID2Interface) {
 					fmt.Printf("interface %v does not exist\n> ", id)
 					continue
 				}
@@ -106,23 +106,9 @@ func (node *Node) RIPReqDaemon() {
 }
 
 // Send NodeEx
-func (node *Node) SendExTimeCLI(destIP string) {
+func (rt *RoutingTable) SendExTimeCLI(destIP string) {
 	// sleep 12 second and check whether the time expires
 	time.Sleep(13 * time.Second)
 	cli := proto.NewNodeEx(proto.MESSAGE_ROUTEEX, 0, []byte{}, destIP, 0, "")
-	node.NodeExChan <- cli
-}
-
-// Send Triggered Updates
-func (node *Node) BroadcastRIPRespTU(entity proto.Entry) {
-	for _, li := range node.ID2Interface {
-		if !li.IsUp() {
-			continue
-		}
-		entries := []proto.Entry{}
-		entries = append(entries, entity)
-		rip := proto.NewPktRIP(li.IPLocal, li.IPRemote, 2, entries)
-		bytes := rip.Marshal()
-		li.SendPacket(bytes)
-	}
+	rt.NodeExChan <- cli
 }

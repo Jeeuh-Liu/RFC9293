@@ -6,7 +6,7 @@ You can check the first commit of file lab.md on the branch of jiaxin
 
 
 
-# Overview
+# Node
 
 The main idea of my node is to leverage channel to avoid data racing. To be specific, all operations of node including handling packets, updating routing table, and checking expired routes will be linearized by sending to channel before they are down.
 
@@ -20,6 +20,25 @@ There will be 4 channels in each node:
 | NodeCLIChan   | Handle CLI from user (lr, li, down, up)                      |
 
  The link interface will interact with node though NodePktOpChan so we need to pass it to link interface when initializing it.
+
+
+
+# Routing Table
+
+Each node has one routing table which can be used to send packets though link
+
+| Metadata           | functionality                       |
+| ------------------ | ----------------------------------- |
+| RemoteDestIP2Cost  | store min cost of each route        |
+| RemoteDestIP2SrcIP | store srcIP of each route           |
+| RemoteDest2ExTime  | store expiration time of each route |
+
+| Variables    | functionality         |
+| ------------ | --------------------- |
+| ID2Interface | store link Interfaces |
+| DestIP2Route | store routes          |
+
+
 
 
 
