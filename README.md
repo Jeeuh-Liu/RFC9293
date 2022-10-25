@@ -1,4 +1,29 @@
-# How you abstract your link layer and its interfaces
+# Lab
+
+Lab has been finished on time
+
+You can check the first commit of file lab.md on the branch of jiaxin
+
+
+
+# Overview
+
+The main idea of my node is to leverage channel to avoid data racing. To be specific, all operations of node including handling packets, updating routing table, and checking expired routes will be linearized by sending to channel before they are down.
+
+There will be 4 channels in each node:
+
+| channel       | functionality                                                |
+| ------------- | ------------------------------------------------------------ |
+| NodeBCChan    | Broadcast RIP messages(RIP requets, RIP respones and triggered updates) |
+| NodeExChan    | Check whether the routes have expired (delete expired routes from routing table) |
+| NodePktOpChan | Handle received bytes of packets passed from Link Interface (handle RIP packets and Test packets) |
+| NodeCLIChan   | Handle CLI from user (lr, li, down, up)                      |
+
+ The link interface will interact with node though NodePktOpChan so we need to pass it to link interface when initializing it.
+
+
+
+# Link Interface
 
 Each link interface includes the vitual link (UDP socket) to send/receive bytes to/from neighbors and metadata about IP address and MAC address of linked nodes.
 
@@ -18,11 +43,17 @@ The structure of Link Interface looks like this:
 | LinkConn      | *net.UDPConn          | read / write bytes from/into the link |
 | NodePktOpChan | chan *proto.NodePktOp | send bytes of packet back to its node |
 
+The link interface will listen on the port number in the Inx file and send bytes with the same port number.
+
+When link interface receive some bytes, it will check whether the sender has the same remoteAddr as its. The link interface will abandon the data if the addresses are different. Besides, if status of remote link is "down", the data will be refused either 
 
 
-# The thread model for your RIP implementation
 
-## Broadcast RIP packets
+
+
+# RIP Packets
+
+There are 5 cases of sending RIP packets:
 
 - When the node comes online, broadcast RIP request packets
 
@@ -36,14 +67,12 @@ The structure of Link Interface looks like this:
 
 - If status of 1 link is set to "down", broadcast triggered udpate( cost of route entry == 16) to neighbors
 
-  
+RIP messages will be marshalled to bytes then sent through the link which has corresponding next hop. The remote link will pass the bytes into NodeCLIChan then the node running upon this link will handle this RIP packet like this: 
 
-## Handle RIP packet
-
-- Validity
+- Check Validity:
   - Check whether the checksum in header is valid
   - Check if TTL == 0
-- RIP Packet
+- Check metadata of RIP Packet:
   - if destIP is local IP of current node, it will not expire
   - if destIP does not exist in routing table of current node, add the route to routing table and reset its expiration time
   - if newCost < oldCost, update cost of this route to smaller cost and reset its expiration time
@@ -53,14 +82,15 @@ The structure of Link Interface looks like this:
 
 
 
-# The steps you will need to process IP packets
+# Test Packets
 
-## Handle IP Packet
+The node receiving commands from user will try to send a test packet to destIP through link interface whose next hop IP fits the routing table. Other nodes receiving bytes of test packets will handle the packets like this: 
 
-- Validity
+- Check Validity:
   - Check whether the checksum in header is valid
   - Check if TTL == 0
-- Test Packet
+- Check metadata of Test Packet:
   - If destIP is one of local IP addresses of current node, print out this test msg
   - If destIP matches any route in the routing table, send it though the corresponding link interface
   - If destIP does not any route, stop routing
+

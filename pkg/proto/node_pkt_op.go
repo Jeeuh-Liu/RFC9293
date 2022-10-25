@@ -12,6 +12,7 @@ type NodePktOp struct {
 	Msg     string
 }
 
+// Receive one packet
 func NewNodePktOp(opType, id uint8, bytes interface{}, destIP string, protoID int, msg string) *NodePktOp {
 	nodePktOp := &NodePktOp{
 		OpType:  opType,

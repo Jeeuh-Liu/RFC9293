@@ -12,6 +12,7 @@ type NodeEx struct {
 	Msg     string
 }
 
+// Node Expiration
 func NewNodeEx(opType, id uint8, bytes []byte, destIP string, protoID int, msg string) *NodeEx {
 	nodeEx := &NodeEx{
 		OpType:  opType,

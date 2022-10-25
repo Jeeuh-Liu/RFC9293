@@ -113,7 +113,7 @@ func (node *Node) SendExTimeCLI(destIP string) {
 	node.NodeExChan <- cli
 }
 
-// Send NodePktOp
+// Send Triggered Updates
 func (node *Node) BroadcastRIPRespTU(entity proto.Entry) {
 	for _, li := range node.ID2Interface {
 		if !li.IsUp() {
