@@ -141,10 +141,10 @@ func (node *Node) HandleReceivePacket(bytes []byte, destAddr string) {
 	if err != nil {
 		log.Fatalln("Parse Header", err)
 	}
-	b := proto.UnmarshalRIPBody(bytes[20:])
 	// HandleRIPResp or HandleTest
 	switch h.Protocol {
 	case 200:
+		b := proto.UnmarshalRIPBody(bytes[20:])
 		if b.Command == 1 {
 			// fmt.Printf("Receive a RIP Req Packet from %v\n", destAddr)
 			node.RT.HandleRIPReq(h.Src.String())
