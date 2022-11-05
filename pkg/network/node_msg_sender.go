@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
 	"time"
 )
@@ -84,6 +85,16 @@ func (node *Node) ScanClI() {
 				// cli := proto.NewNodeCLI(proto.MESSAGE_SENDPKT, 0, []byte{}, destIP, protoID, msg)
 				cli := proto.NewNodeCLI(proto.MESSAGE_SENDPKT, 0, []byte{}, destIP, protoID, msg, "")
 				node.NodeCLIChan <- cli
+			} else if len(ws) == 2 && ws[0] == "debug" {
+				if ws[1] == "on" {
+					myDebug.SetDebug(true)
+					myDebug.Debugln("debug mode is on")
+				} else {
+					myDebug.SetDebug(false)
+					myDebug.Debugln("debug mode is off, output from debug")
+					fmt.Println("debug mode is off, output from stdout")
+				}
+				fmt.Printf(">")
 			} else if len(ws) == 2 && ws[0] == "a" { //a port
 				_, err := strconv.Atoi(ws[1])
 				if err != nil {

@@ -2,6 +2,7 @@ package network
 
 import (
 	"fmt"
+	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
 	"tcpip/pkg/tcp"
 )
@@ -21,6 +22,8 @@ type Node struct {
 }
 
 func (node *Node) Make(args []string) {
+	myDebug.InitDebugger()
+
 	// Initialize Channel
 	node.NodeCLIChan = make(chan *proto.NodeCLI)
 	node.NodeBCChan = make(chan *proto.NodeBC)

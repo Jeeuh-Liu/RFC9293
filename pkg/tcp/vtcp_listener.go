@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"fmt"
+	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
 )
 
@@ -27,6 +28,8 @@ func NewListener(port uint16) *VTCPListener {
 func (listener *VTCPListener) acceptLoop() error {
 	for {
 		packet := <-listener.AcceptQueue
+		myDebug.Debugln("socket listening on %v receives a request from %v:%v",
+			listener.localPort, packet.IPhdr.Src.String(), packet.TCPhdr.SrcPort)
 		conn := NewNormalSocket(packet)
 		listener.spawnChan <- conn
 	}

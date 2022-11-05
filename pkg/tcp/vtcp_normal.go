@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
 
 	"github.com/google/netstack/tcpip/header"
@@ -45,12 +46,18 @@ func NewNormalSocket(pkt *proto.Segment) *VTCPConn {
 // Q: handle RST-?
 // TODO: resubmission
 func (conn *VTCPConn) SynRecv() {
+	myDebug.Debugln("connection with %v:%v enter syn_recv state",
+		conn.RemoteAddr.String(), conn.RemotePort)
 	ack := &proto.Segment{
 		TCPhdr:  conn.buildTCPHdr(),
 		Payload: []byte{},
 	}
+	fmt.Println(ack.TCPhdr)
 	ack.TCPhdr.Flags |= header.TCPFlagSyn
-	//send
+	conn.Upstream <- &proto.SegmentMsg{
+		SocketID: conn.ID,
+		Seg:      ack,
+	}
 	for {
 		rev := <-conn.Buffer
 		if rev.TCPhdr.SeqNum == conn.seqNum+1 {

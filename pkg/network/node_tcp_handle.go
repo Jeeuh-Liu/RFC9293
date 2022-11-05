@@ -49,6 +49,7 @@ func (node *Node) acceptConn(listener *tcp.VTCPListener) {
 }
 
 func (node *Node) sendOutSegment(msg *proto.SegmentMsg) {
+	fmt.Println("reach 52")
 	conn := node.socketTable.FindConnByID(msg.SocketID)
 	hdr := msg.Seg.TCPhdr
 	payload := msg.Seg.Payload
@@ -56,8 +57,9 @@ func (node *Node) sendOutSegment(msg *proto.SegmentMsg) {
 	hdr.Checksum = checksum
 	tcpHeaderBytes := make(header.TCP, proto.TcpHeaderLen)
 	tcpHeaderBytes.Encode(hdr)
-	ipPacketPayload := make([]byte, 0, len(tcpHeaderBytes)+len(payload))
-	ipPacketPayload = append(ipPacketPayload, tcpHeaderBytes...)
-	ipPacketPayload = append(ipPacketPayload, []byte(payload)...)
-	//TODO
+	iPayload := make([]byte, 0, len(tcpHeaderBytes)+len(payload))
+	iPayload = append(iPayload, tcpHeaderBytes...)
+	iPayload = append(iPayload, []byte(payload)...)
+	fmt.Println(iPayload)
+	node.RT.SendPacket(conn.RemoteAddr.String(), proto.PROTOCOL_TCP, string(iPayload))
 }
