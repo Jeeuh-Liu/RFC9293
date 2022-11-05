@@ -18,7 +18,7 @@ const (
 type VTCPConn struct {
 	state      uint8
 	seqNum     uint32
-	expectACK  uint32
+	ackNum     uint32
 	LocalAddr  net.IP
 	LocalPort  uint16
 	RemoteAddr net.IP
@@ -34,12 +34,13 @@ func NewNormalSocket(pkt *proto.Segment) *VTCPConn {
 		state: proto.SYN_RECV,
 		// seqNum:     rand.Uint32(),
 		seqNum:     0xd599,
-		expectACK:  MINACKNUM,
+		ackNum:     pkt.TCPhdr.SeqNum + 1,
 		LocalPort:  pkt.TCPhdr.DstPort,
 		LocalAddr:  pkt.IPhdr.Dst,
 		RemoteAddr: pkt.IPhdr.Src,
 		RemotePort: pkt.TCPhdr.SrcPort,
 		windowSize: DEFAULTWINDOWSIZE,
+		Buffer:     make(chan *proto.Segment),
 	}
 }
 
@@ -53,18 +54,30 @@ func (conn *VTCPConn) SynRecv() {
 		Payload: []byte{},
 	}
 	ack.TCPhdr.Flags |= header.TCPFlagSyn
-	ack.TCPhdr.AckNum = 0x114dd
 	conn.Upstream <- &proto.SegmentMsg{
 		SocketID: conn.ID,
 		Seg:      ack,
 	}
 	for {
 		rev := <-conn.Buffer
-		if rev.TCPhdr.SeqNum == conn.seqNum+1 {
+
+		myDebug.Debugln("%v:%v receive packet from %v:%v, SEQ: %v, ACK %v", conn.LocalAddr.String(), conn.LocalPort,
+			conn.RemoteAddr.String(), conn.RemotePort, rev.TCPhdr.SeqNum, rev.TCPhdr.AckNum)
+
+		if conn.ackNum == rev.TCPhdr.SeqNum+1 {
+			conn.seqNum++
 			conn.state = proto.ESTABLISH
-			conn.seqNum += 2
+			ack := &proto.Segment{
+				TCPhdr:  conn.buildTCPHdr(),
+				Payload: []byte{},
+			}
+			conn.Upstream <- &proto.SegmentMsg{
+				SocketID: conn.ID,
+				Seg:      ack,
+			}
 			return
 		}
+
 	}
 }
 
@@ -78,7 +91,7 @@ func (conn *VTCPConn) buildTCPHdr() *header.TCPFields {
 		SrcPort:       conn.LocalPort,
 		DstPort:       conn.RemotePort,
 		SeqNum:        conn.seqNum,
-		AckNum:        conn.expectACK,
+		AckNum:        conn.ackNum,
 		DataOffset:    DEFAULTDATAOFFSET,
 		Flags:         header.TCPFlagAck,
 		WindowSize:    conn.windowSize,
