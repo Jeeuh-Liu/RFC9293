@@ -33,7 +33,7 @@ func NewNormalSocket(pkt *proto.Segment) *VTCPConn {
 	return &VTCPConn{
 		state: proto.SYN_RECV,
 		// seqNum:     rand.Uint32(),
-		seqNum:     0,
+		seqNum:     0xd599,
 		expectACK:  MINACKNUM,
 		LocalPort:  pkt.TCPhdr.DstPort,
 		LocalAddr:  pkt.IPhdr.Dst,
@@ -53,6 +53,7 @@ func (conn *VTCPConn) SynRecv() {
 		Payload: []byte{},
 	}
 	ack.TCPhdr.Flags |= header.TCPFlagSyn
+	ack.TCPhdr.AckNum = 0x114dd
 	conn.Upstream <- &proto.SegmentMsg{
 		SocketID: conn.ID,
 		Seg:      ack,
