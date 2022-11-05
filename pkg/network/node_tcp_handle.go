@@ -35,6 +35,7 @@ func (node *Node) handleCreateListener(msg *proto.NodeCLI) {
 	}
 }
 
+// a port -> listener  -> go node.acceptConn(listener)
 func (node *Node) acceptConn(listener *tcp.VTCPListener) {
 	for {
 		conn, err := listener.VAccept()
@@ -44,12 +45,12 @@ func (node *Node) acceptConn(listener *tcp.VTCPListener) {
 		tuple := conn.GetTuple()
 		conn.Upstream = node.segSendChan
 		node.socketTable.OfferConn(tuple, conn)
+		//syn : 1
 		go conn.SynRecv()
 	}
 }
 
 func (node *Node) sendOutSegment(msg *proto.SegmentMsg) {
-	fmt.Println("reach 52")
 	conn := node.socketTable.FindConnByID(msg.SocketID)
 	hdr := msg.Seg.TCPhdr
 	payload := msg.Seg.Payload
@@ -60,6 +61,6 @@ func (node *Node) sendOutSegment(msg *proto.SegmentMsg) {
 	iPayload := make([]byte, 0, len(tcpHeaderBytes)+len(payload))
 	iPayload = append(iPayload, tcpHeaderBytes...)
 	iPayload = append(iPayload, []byte(payload)...)
-	fmt.Println(iPayload)
+	proto.PrintHex(iPayload)
 	node.RT.SendPacket(conn.RemoteAddr.String(), proto.PROTOCOL_TCP, string(iPayload))
 }

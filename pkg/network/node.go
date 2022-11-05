@@ -17,8 +17,8 @@ type Node struct {
 	NodePktOpChan chan *proto.NodePktOp // Receive msg from link interface
 	RT            *RoutingTable
 	socketTable   *tcp.SocketTable
-	segRecvChan   chan *proto.Segment
-	segSendChan   chan *proto.SegmentMsg
+	segRecvChan   chan *proto.Segment    //seg received from the network/router(PROTO:6)
+	segSendChan   chan *proto.SegmentMsg //seg to be sent from normal socket
 }
 
 func (node *Node) Make(args []string) {

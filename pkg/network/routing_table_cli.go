@@ -104,7 +104,7 @@ func (rt *RoutingTable) SendPacket(destIP string, protoID int, msg string) {
 				fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
 				test := proto.NewPktTest(li.IPLocal, destIP, msg, ttl-1)
 				bytes := test.Marshal()
-				fmt.Println(bytes)
+				proto.PrintHex(bytes)
 				li.SendPacket(bytes)
 				return
 			}

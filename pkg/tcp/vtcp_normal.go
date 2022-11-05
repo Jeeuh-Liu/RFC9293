@@ -2,7 +2,6 @@ package tcp
 
 import (
 	"fmt"
-	"math/rand"
 	"net"
 	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
@@ -32,8 +31,9 @@ type VTCPConn struct {
 
 func NewNormalSocket(pkt *proto.Segment) *VTCPConn {
 	return &VTCPConn{
-		state:      proto.SYN_RECV,
-		seqNum:     rand.Uint32(),
+		state: proto.SYN_RECV,
+		// seqNum:     rand.Uint32(),
+		seqNum:     0,
 		expectACK:  MINACKNUM,
 		LocalPort:  pkt.TCPhdr.DstPort,
 		LocalAddr:  pkt.IPhdr.Dst,
@@ -52,7 +52,6 @@ func (conn *VTCPConn) SynRecv() {
 		TCPhdr:  conn.buildTCPHdr(),
 		Payload: []byte{},
 	}
-	fmt.Println(ack.TCPhdr)
 	ack.TCPhdr.Flags |= header.TCPFlagSyn
 	conn.Upstream <- &proto.SegmentMsg{
 		SocketID: conn.ID,

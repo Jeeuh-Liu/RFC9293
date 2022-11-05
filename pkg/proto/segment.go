@@ -99,3 +99,12 @@ func ComputeTCPChecksum(tcpHdr *header.TCPFields,
 	// in the netstack package's implementation
 	return fullChecksum ^ 0xffff
 }
+
+func PrintHex(bytes []byte) {
+	fmt.Printf("[")
+	for _, b := range bytes {
+		fmt.Printf("%x ", b)
+	}
+	fmt.Printf("]")
+	fmt.Println()
+}
