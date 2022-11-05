@@ -10,7 +10,7 @@ import (
 var Debug *log.Logger
 
 func InitDebugger() {
-	Debug = log.New(io.Discard, "", log.Ltime|log.Lshortfile)
+	Debug = log.New(os.Stdout, "", log.Ltime|log.Lshortfile)
 }
 
 func SetDebug(enabled bool) {

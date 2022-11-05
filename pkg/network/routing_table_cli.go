@@ -103,7 +103,7 @@ func (rt *RoutingTable) SendPacket(destIP string, protoID int, msg string) {
 		// Choose the link whose IPRemote == nextIP to send
 		for _, li := range rt.ID2Interface {
 			if li.IPRemote == route.Next {
-				fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
+				// fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
 				test := proto.NewPktTest(li.IPLocal, destIP, msg, ttl-1)
 				if protoID == 6 {
 					test.Header.Protocol = 6
@@ -117,7 +117,7 @@ func (rt *RoutingTable) SendPacket(destIP string, protoID int, msg string) {
 				test.Header.Checksum = int(proto.ComputeChecksum(headerBytes))
 
 				bytes := test.Marshal()
-				proto.PrintHex(bytes)
+				// proto.PrintHex(bytes)
 				li.SendPacket(bytes)
 				return
 			}

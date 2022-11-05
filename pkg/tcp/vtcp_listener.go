@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
+
+	"github.com/google/netstack/tcpip/header"
 )
 
 type VTCPListener struct {
@@ -28,10 +30,12 @@ func NewListener(port uint16) *VTCPListener {
 func (listener *VTCPListener) acceptLoop() error {
 	for {
 		packet := <-listener.AcceptQueue
-		myDebug.Debugln("socket listening on %v receives a request from %v:%v",
-			listener.localPort, packet.IPhdr.Src.String(), packet.TCPhdr.SrcPort)
-		conn := NewNormalSocket(packet)
-		listener.spawnChan <- conn
+		if packet.TCPhdr.Flags == header.TCPFlagSyn {
+			myDebug.Debugln("socket listening on %v receives a request from %v:%v",
+				listener.localPort, packet.IPhdr.Src.String(), packet.TCPhdr.SrcPort)
+			conn := NewNormalSocket(packet)
+			listener.spawnChan <- conn
+		}
 	}
 }
 

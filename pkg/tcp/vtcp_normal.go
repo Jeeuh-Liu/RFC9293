@@ -60,10 +60,6 @@ func (conn *VTCPConn) SynRecv() {
 	}
 	for {
 		rev := <-conn.Buffer
-
-		myDebug.Debugln("%v:%v receive packet from %v:%v, SEQ: %v, ACK %v", conn.LocalAddr.String(), conn.LocalPort,
-			conn.RemoteAddr.String(), conn.RemotePort, rev.TCPhdr.SeqNum, rev.TCPhdr.AckNum)
-
 		if conn.ackNum == rev.TCPhdr.SeqNum+1 {
 			conn.seqNum++
 			conn.state = proto.ESTABLISH

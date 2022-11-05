@@ -3,6 +3,7 @@ package network
 import (
 	"fmt"
 	"strconv"
+	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
 	"tcpip/pkg/tcp"
 
@@ -13,7 +14,11 @@ func (node *Node) handleTCP() {
 	for {
 		segment := <-node.segRecvChan
 		tuple := segment.FormTuple()
+		fmt.Println(tuple)
 		if conn := node.socketTable.FindConn(tuple); conn != nil {
+			myDebug.Debugln("%v:%v receive packet from %v:%v, SEQ: %v, ACK %v",
+				conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
+				conn.RemotePort, segment.TCPhdr.SeqNum, segment.TCPhdr.AckNum)
 			conn.Buffer <- segment
 		}
 		dstPort := segment.TCPhdr.DstPort
@@ -61,6 +66,6 @@ func (node *Node) sendOutSegment(msg *proto.SegmentMsg) {
 	iPayload := make([]byte, 0, len(tcpHeaderBytes)+len(payload))
 	iPayload = append(iPayload, tcpHeaderBytes...)
 	iPayload = append(iPayload, []byte(payload)...)
-	proto.PrintHex(iPayload)
+	// proto.PrintHex(iPayload)
 	node.RT.SendPacket(conn.RemoteAddr.String(), proto.PROTOCOL_TCP, string(iPayload))
 }
