@@ -62,6 +62,9 @@ func (node *Node) HandleNodeCLI(nodeCLI *proto.NodeCLI) {
 	case proto.CLI_CREATELISTENER:
 		node.handleCreateListener(nodeCLI)
 		fmt.Printf("> ")
+	case proto.CLI_LS:
+		node.HandlePrintSockets()
+		fmt.Printf("> ")
 	}
 }
 
@@ -120,6 +123,10 @@ func (node *Node) HandlePrintRoutesToFile(filename string) {
 
 func (node *Node) HandleSendPacket(destIP string, protoID int, msg string) {
 	node.RT.SendPacket(destIP, protoID, msg)
+}
+
+func (node *Node) HandlePrintSockets() {
+	node.socketTable.PrintSockets()
 }
 
 // ***********************************************************************************

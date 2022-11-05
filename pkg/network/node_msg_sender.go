@@ -103,6 +103,15 @@ func (node *Node) ScanClI() {
 				}
 				cli := &proto.NodeCLI{CLIType: proto.CLI_CREATELISTENER, Msg: ws[1]}
 				node.NodeCLIChan <- cli
+			} else if (len(ws) == 1 || len(ws) == 2) && ws[0] == "ls" {
+				if len(ws) == 1 {
+					cli := proto.NewNodeCLI(proto.CLI_LS, 0, []byte{}, "", 0, "", "")
+					node.NodeCLIChan <- cli
+				} else {
+					// print lr to a file
+					cli := proto.NewNodeCLI(proto.CLI_LSFILE, 0, []byte{}, "", 0, "", ws[1])
+					node.NodeCLIChan <- cli
+				}
 			} else {
 				fmt.Printf("Invalid command\n> ")
 			}

@@ -1,6 +1,9 @@
 package tcp
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 type SocketTable struct {
 	mu sync.Mutex
@@ -19,6 +22,21 @@ func NewSocketTable() *SocketTable {
 		tuple2NormalConns: make(map[string]*VTCPConn),
 		id2Listeners:      make(map[uint16]*VTCPListener),
 		port2Listeners:    make(map[uint16]*VTCPListener),
+	}
+}
+
+func (table *SocketTable) PrintSockets() {
+	fmt.Println("socket  local-addr      port            dst-addr        port    status")
+	fmt.Println("----------------------------------------------------------------------")
+	// Print out Listener Conns
+	for i := 0; i < int(table.counter); i++ {
+		if conn, ok := table.id2Listeners[uint16(i)]; ok {
+			fmt.Printf("%v       0.0.0.0        %v            0.0.0.0       0.0.0.0      %v\n", i, conn.localPort, conn.state)
+		} else {
+			conn := table.id2Conns[uint16(i)]
+			// 0       10.0.0.1        1024            10.0.0.14       80      ESTAB
+			fmt.Printf("%v       %v        %v            %v       %v      %v\n", i, conn.LocalAddr, conn.LocalPort, conn.RemoteAddr, conn.RemotePort, conn.state)
+		}
 	}
 }
 

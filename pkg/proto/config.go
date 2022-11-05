@@ -3,26 +3,27 @@ package proto
 // API of node
 const (
 	// Command Line Interface
-	CLI_SETUP   = uint8(0)
-	CLI_SETDOWN = uint8(1)
-	CLI_QUIT    = uint8(2)
-	CLI_LI      = uint8(3)
-	CLI_LR      = uint8(4)
-	CLI_LIFILE  = uint8(5)
-	CLI_LRFILE  = uint8(6)
+	CLI_SETUP          = uint8(0)
+	CLI_SETDOWN        = uint8(1)
+	CLI_QUIT           = uint8(2)
+	CLI_LI             = uint8(3)
+	CLI_LIFILE         = uint8(5)
+	CLI_LR             = uint8(4)
+	CLI_LRFILE         = uint8(6)
+	CLI_LS             = uint8(7)
+	CLI_LSFILE         = uint8(8)
+	CLI_CREATELISTENER = uint8(9)
+	CLI_SENDSEGMENT    = uint8(10)
+	CLI_RECVSEGMENT    = uint8(11)
 	// network pass Packet to link
-	MESSAGE_BCRIPREQ  = uint8(7)
-	MESSAGE_BCRIPRESP = uint8(8)
+	MESSAGE_BCRIPREQ  = uint8(20)
+	MESSAGE_BCRIPRESP = uint8(21)
 	// Remote Route Expiration
-	MESSAGE_ROUTEEX = uint8(9)
+	MESSAGE_ROUTEEX = uint8(22)
 	// Send Packet to Link
-	MESSAGE_SENDPKT = uint8(10)
+	MESSAGE_SENDPKT = uint8(23)
 	// Link pass packet back to network
-	MESSAGE_REVPKT = uint8(11)
-
-	CLI_CREATELISTENER = uint8(12)
-	CLI_SENDSEGMENT    = uint8(13)
-	CLI_RECVSEGMENT    = uint8(13)
+	MESSAGE_REVPKT = uint8(24)
 
 	PROTOCOL_RIP        = 200
 	PROTOCOL_TESTPACKET = 0
