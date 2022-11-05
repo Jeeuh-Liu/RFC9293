@@ -26,6 +26,8 @@ func (node *Node) ReceiveOpFromChan() {
 		case nodePktOp := <-node.NodePktOpChan:
 			// fmt.Println(nodePktOp)
 			node.HandleNodePktOp(nodePktOp)
+		case msg := <-node.segSendChan:
+			node.sendOutSegment(msg)
 		}
 	}
 }
@@ -56,6 +58,9 @@ func (node *Node) HandleNodeCLI(nodeCLI *proto.NodeCLI) {
 		fmt.Printf("> ")
 	case proto.CLI_LRFILE:
 		node.HandlePrintRoutesToFile(nodeCLI.Filename)
+		fmt.Printf("> ")
+	case proto.CLI_CREATELISTENER:
+		node.handleCreateListener(nodeCLI)
 		fmt.Printf("> ")
 	}
 }
@@ -143,7 +148,7 @@ func (node *Node) HandleReceivePacket(bytes []byte, destAddr string) {
 	}
 	// HandleRIPResp or HandleTest
 	switch h.Protocol {
-	case 200:
+	case proto.PROTOCOL_RIP:
 		b := proto.UnmarshalRIPBody(bytes[20:])
 		if b.Command == 1 {
 			// fmt.Printf("Receive a RIP Req Packet from %v\n", destAddr)
@@ -152,9 +157,14 @@ func (node *Node) HandleReceivePacket(bytes []byte, destAddr string) {
 			// fmt.Printf("Receive a RIP Resp Packet from %v\n", destAddr)
 			node.RT.HandleRIPResp(bytes)
 		}
-	case 0:
+	case proto.PROTOCOL_TESTPACKET:
 		// fmt.Printf("Receive a TEST Packet from %v\n", destAddr)
 		node.HandleTest(bytes)
+	case proto.PROTOCOL_TCP:
+		segment, err := proto.UnMarshalSegment(h, bytes)
+		if err == nil {
+			node.segRecvChan <- segment
+		}
 	}
 }
 

@@ -84,6 +84,14 @@ func (node *Node) ScanClI() {
 				// cli := proto.NewNodeCLI(proto.MESSAGE_SENDPKT, 0, []byte{}, destIP, protoID, msg)
 				cli := proto.NewNodeCLI(proto.MESSAGE_SENDPKT, 0, []byte{}, destIP, protoID, msg, "")
 				node.NodeCLIChan <- cli
+			} else if len(ws) == 2 && ws[0] == "a" { //a port
+				_, err := strconv.Atoi(ws[1])
+				if err != nil {
+					fmt.Printf("strconv.Atoi: parsing %v: invalid syntax\n> ", ws[1])
+					continue
+				}
+				cli := &proto.NodeCLI{CLIType: proto.CLI_CREATELISTENER, Msg: ws[1]}
+				node.NodeCLIChan <- cli
 			} else {
 				fmt.Printf("Invalid command\n> ")
 			}

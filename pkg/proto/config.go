@@ -19,4 +19,16 @@ const (
 	MESSAGE_SENDPKT = uint8(10)
 	// Link pass packet back to network
 	MESSAGE_REVPKT = uint8(11)
+
+	CLI_CREATELISTENER = uint8(12)
+	CLI_SENDSEGMENT    = uint8(13)
+	CLI_RECVSEGMENT    = uint8(13)
+
+	PROTOCOL_RIP        = 200
+	PROTOCOL_TESTPACKET = 0
+	PROTOCOL_TCP        = 6
+
+	LISTENER  = uint8(0)
+	SYN_RECV  = uint8(1)
+	ESTABLISH = uint8(2)
 )

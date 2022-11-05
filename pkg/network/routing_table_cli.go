@@ -22,7 +22,7 @@ func (rt *RoutingTable) PrintInterfacesToFile(filename string) {
 		log.Println(err)
 	}
 	defer f.Close()
-	header := fmt.Sprintf("id    state        local        remote        port\n")
+	header := "id    state        local        remote        port\n"
 	_, err = f.WriteString(header)
 	if err != nil {
 		log.Println(err)
@@ -78,7 +78,7 @@ func (rt *RoutingTable) PrintRoutesToFile(filename string) {
 		log.Println(err)
 	}
 	defer f.Close()
-	header := fmt.Sprintf("    dest        	next        cost\n")
+	header := "    dest        	next        cost\n"
 	_, err = f.WriteString(header)
 	if err != nil {
 		log.Println(err)
