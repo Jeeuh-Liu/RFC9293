@@ -302,3 +302,16 @@ func (rt *RoutingTable) BroadcastRIPRespTU(entity proto.Entry) {
 		li.SendPacket(bytes)
 	}
 }
+
+// ***********************************************************************************
+// Find Src IP addr
+func (rt *RoutingTable) FindSrcIPAddr(destIP string) string {
+	if route, ok := rt.DestIP2Route[destIP]; ok {
+		for _, li := range rt.ID2Interface {
+			if li.IPRemote == route.Next {
+				return li.IPLocal
+			}
+		}
+	}
+	return "no"
+}

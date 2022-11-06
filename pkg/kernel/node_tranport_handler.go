@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
@@ -54,12 +55,26 @@ func (node *Node) NodeAcceptLoop(listener *tcp.VTCPListener) {
 		if err != nil {
 			continue
 		}
-		tuple := conn.GetTuple()
 		conn.NodeSegSendChan = node.segSendChan
-		node.socketTable.OfferConn(tuple, conn)
+		node.socketTable.OfferConn(conn)
 		//syn : 1
 		conn.VTCPConnSynHandler()
 	}
+}
+
+// *****************************************************************************************
+// Handle Create Listener
+func (node *Node) HandleCreateConn(nodeCLI *proto.NodeCLI) {
+	// Create a Normal Socket
+	srcIP := node.RT.FindSrcIPAddr(nodeCLI.DestIP)
+	if srcIP == "no" {
+		fmt.Println("v_connect() error: No route to host")
+		return
+	}
+	conn := tcp.NewNormalSocket(0, nodeCLI.DestPort, node.socketTable.ConnPort, net.ParseIP(nodeCLI.DestIP), net.ParseIP(srcIP))
+	node.socketTable.OfferConn(conn)
+	// Send SYN
+
 }
 
 // *****************************************************************************************

@@ -9,6 +9,7 @@ import (
 type SocketTable struct {
 	mu sync.Mutex
 	//tuple := remoteIP::remotePort::localPort
+	ConnPort          uint16
 	counter           uint16
 	id2Conns          map[uint16]*VTCPConn
 	tuple2NormalConns map[string]*VTCPConn
@@ -18,6 +19,7 @@ type SocketTable struct {
 
 func NewSocketTable() *SocketTable {
 	return &SocketTable{
+		ConnPort:          uint16(1024),
 		counter:           uint16(0),
 		id2Conns:          make(map[uint16]*VTCPConn),
 		tuple2NormalConns: make(map[string]*VTCPConn),
@@ -54,13 +56,15 @@ func (table *SocketTable) OfferListener(port uint16) *VTCPListener {
 	return listener
 }
 
-func (table *SocketTable) OfferConn(tuple string, conn *VTCPConn) {
+func (table *SocketTable) OfferConn(conn *VTCPConn) {
 	table.mu.Lock()
 	defer table.mu.Unlock()
+	tuple := conn.GetTuple()
 	conn.ID = table.counter
 	table.id2Conns[conn.ID] = conn
 	table.tuple2NormalConns[tuple] = conn
 	table.counter++
+	table.ConnPort++
 }
 
 func (table *SocketTable) FindListener(port uint16) *VTCPListener {

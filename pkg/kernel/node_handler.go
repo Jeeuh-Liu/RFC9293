@@ -66,6 +66,9 @@ func (node *Node) HandleNodeCLI(nodeCLI *proto.NodeCLI) {
 	case proto.CLI_LS:
 		node.HandlePrintSockets()
 		fmt.Printf("> ")
+	case proto.CLI_CREATECONN:
+		node.HandleCreateConn(nodeCLI)
+		fmt.Printf("> ")
 	}
 }
 

@@ -28,20 +28,20 @@ func (node *Node) ScanClI() {
 			// fmt.Println(ws, len(ws), ws[0])
 			if (len(ws) == 1 || len(ws) == 2) && ws[0] == "li" {
 				if len(ws) == 1 {
-					cli := proto.NewNodeCLI(proto.CLI_LI, 0, []byte{}, "", 0, "", "")
+					cli := proto.NewNodeCLI(proto.CLI_LI, 0, []byte{}, "", 0, 0, "", "")
 					node.NodeCLIChan <- cli
 				} else {
 					// print li to a file
-					cli := proto.NewNodeCLI(proto.CLI_LIFILE, 0, []byte{}, "", 0, "", ws[1])
+					cli := proto.NewNodeCLI(proto.CLI_LIFILE, 0, []byte{}, "", 0, 0, "", ws[1])
 					node.NodeCLIChan <- cli
 				}
 			} else if (len(ws) == 1 || len(ws) == 2) && ws[0] == "lr" {
 				if len(ws) == 1 {
-					cli := proto.NewNodeCLI(proto.CLI_LR, 0, []byte{}, "", 0, "", "")
+					cli := proto.NewNodeCLI(proto.CLI_LR, 0, []byte{}, "", 0, 0, "", "")
 					node.NodeCLIChan <- cli
 				} else {
 					// print lr to a file
-					cli := proto.NewNodeCLI(proto.CLI_LRFILE, 0, []byte{}, "", 0, "", ws[1])
+					cli := proto.NewNodeCLI(proto.CLI_LRFILE, 0, []byte{}, "", 0, 0, "", ws[1])
 					node.NodeCLIChan <- cli
 				}
 			} else if len(ws) == 2 && ws[0] == "up" {
@@ -55,7 +55,7 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// open link
-				cli := proto.NewNodeCLI(uint8(proto.CLI_SETUP), uint8(id), []byte{}, "", 0, "", "")
+				cli := proto.NewNodeCLI(uint8(proto.CLI_SETUP), uint8(id), []byte{}, "", 0, 0, "", "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 2 && ws[0] == "down" {
 				id, err := strconv.Atoi(ws[1])
@@ -68,10 +68,10 @@ func (node *Node) ScanClI() {
 					continue
 				}
 				// close link
-				cli := proto.NewNodeCLI(uint8(proto.CLI_SETDOWN), uint8(id), []byte{}, "", 0, "", "")
+				cli := proto.NewNodeCLI(uint8(proto.CLI_SETDOWN), uint8(id), []byte{}, "", 0, 0, "", "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 1 && ws[0] == "q" {
-				cli := proto.NewNodeCLI(proto.CLI_QUIT, 0, []byte{}, "", 0, "", "")
+				cli := proto.NewNodeCLI(proto.CLI_QUIT, 0, []byte{}, "", 0, 0, "", "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) >= 4 && ws[0] == "send" {
 				destIP := net.ParseIP(ws[1]).String()
@@ -83,7 +83,7 @@ func (node *Node) ScanClI() {
 				msg := line[len(ws[0])+len(ws[1])+len(ws[2])+3:]
 				// fmt.Println(msg)
 				// cli := proto.NewNodeCLI(proto.MESSAGE_SENDPKT, 0, []byte{}, destIP, protoID, msg)
-				cli := proto.NewNodeCLI(proto.MESSAGE_SENDPKT, 0, []byte{}, destIP, protoID, msg, "")
+				cli := proto.NewNodeCLI(proto.MESSAGE_SENDPKT, 0, []byte{}, destIP, 0, protoID, msg, "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 2 && ws[0] == "debug" {
 				if ws[1] == "on" {
@@ -105,13 +105,22 @@ func (node *Node) ScanClI() {
 				node.NodeCLIChan <- cli
 			} else if (len(ws) == 1 || len(ws) == 2) && ws[0] == "ls" {
 				if len(ws) == 1 {
-					cli := proto.NewNodeCLI(proto.CLI_LS, 0, []byte{}, "", 0, "", "")
+					cli := proto.NewNodeCLI(proto.CLI_LS, 0, []byte{}, "", 0, 0, "", "")
 					node.NodeCLIChan <- cli
 				} else {
 					// print lr to a file
-					cli := proto.NewNodeCLI(proto.CLI_LSFILE, 0, []byte{}, "", 0, "", ws[1])
+					cli := proto.NewNodeCLI(proto.CLI_LSFILE, 0, []byte{}, "", 0, 0, "", ws[1])
 					node.NodeCLIChan <- cli
 				}
+			} else if len(ws) == 3 && ws[0] == "c" {
+				ipAddr := ws[1]
+				portS := ws[2]
+				port, err := strconv.Atoi(portS)
+				if err != nil {
+					return
+				}
+				cli := proto.NewNodeCLI(proto.CLI_CREATECONN, 0, []byte{}, ipAddr, uint16(port), 0, "", "")
+				node.NodeCLIChan <- cli
 			} else {
 				fmt.Printf("Invalid command\n> ")
 			}

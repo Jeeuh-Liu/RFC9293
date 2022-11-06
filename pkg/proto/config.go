@@ -13,8 +13,9 @@ const (
 	CLI_LS             = uint8(7)
 	CLI_LSFILE         = uint8(8)
 	CLI_CREATELISTENER = uint8(9)
-	CLI_SENDSEGMENT    = uint8(10)
-	CLI_RECVSEGMENT    = uint8(11)
+	CLI_CREATECONN     = uint8(10)
+	CLI_SENDSEGMENT    = uint8(11)
+	CLI_RECVSEGMENT    = uint8(12)
 	// network pass Packet to link
 	MESSAGE_BCRIPREQ  = uint8(20)
 	MESSAGE_BCRIPRESP = uint8(21)
@@ -32,4 +33,7 @@ const (
 	LISTENER  = "LISTENER"
 	SYN_RECV  = "SYN_RECV"
 	ESTABLISH = "ESTABLISH"
+
+	// the first port we allocate for conn
+	FIRST_PORT = 0
 )

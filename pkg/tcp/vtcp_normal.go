@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
 	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
@@ -29,16 +30,15 @@ type VTCPConn struct {
 	NodeSegSendChan chan *proto.Segment
 }
 
-func NewNormalSocket(pkt *proto.Segment) *VTCPConn {
+func NewNormalSocket(seqNum uint32, dstPort, srcPort uint16, dstIP, srcIP net.IP) *VTCPConn {
 	conn := &VTCPConn{
-		state: proto.SYN_RECV,
-		// seqNum: rand.Uint32(),
-		seqNum:     0xd599,
-		ackNum:     pkt.TCPhdr.SeqNum + 1,
-		LocalPort:  pkt.TCPhdr.DstPort,
-		LocalAddr:  pkt.IPhdr.Dst,
-		RemoteAddr: pkt.IPhdr.Src,
-		RemotePort: pkt.TCPhdr.SrcPort,
+		state:      proto.SYN_RECV,
+		seqNum:     rand.Uint32(),
+		ackNum:     seqNum + 1, // seqNum can be 0 if created by cli
+		LocalPort:  srcPort,
+		LocalAddr:  srcIP,
+		RemoteAddr: dstIP,
+		RemotePort: dstPort,
 		windowSize: DEFAULTWINDOWSIZE,
 		SegRcvChan: make(chan *proto.Segment),
 	}
