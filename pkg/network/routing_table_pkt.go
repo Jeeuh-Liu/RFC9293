@@ -7,7 +7,6 @@ import (
 	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
 
-	"github.com/google/netstack/tcpip/header"
 	"golang.org/x/net/ipv4"
 )
 
@@ -42,19 +41,9 @@ func (rt *RoutingTable) SendTCPPacket(destIP string, protoID int, msg string) {
 			if li.IPRemote == route.Next {
 				fmt.Printf("Try to send a TCP packet from %v to %v\n", li.IPLocal, destIP)
 				// tcpPkt := proto.NewPktTCP(li.IPLocal, destIP, []byte(msg), ttl-1)
-				test := proto.NewPktTest(li.IPLocal, destIP, msg, ttl-1)
-				if protoID == 6 {
-					test.Header.Protocol = 6
-					test.Header.Flags = header.IPv4FlagDontFragment
-				}
-				test.Header.Checksum = 0
-				headerBytes, err := test.Header.Marshal()
-				if err != nil {
-					log.Fatalln("Error marshalling header:  ", err)
-				}
-				test.Header.Checksum = int(proto.ComputeChecksum(headerBytes))
+				tcpPkt := proto.NewPktTCP(li.IPLocal, destIP, []byte(msg), ttl-1)
 
-				bytes := test.Marshal()
+				bytes := tcpPkt.Marshal()
 				// proto.PrintHex(bytes)
 				li.SendPacket(bytes)
 				return

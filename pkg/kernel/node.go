@@ -18,8 +18,8 @@ type Node struct {
 	RT            *network.RoutingTable
 	// Transport Layer
 	socketTable *tcp.SocketTable
-	segRecvChan chan *proto.Segment    //seg received from the network/router(PROTO:6)
-	segSendChan chan *proto.SegmentMsg //seg to be sent from normal socket
+	segRecvChan chan *proto.Segment //seg received from the network/router(PROTO:6)
+	segSendChan chan *proto.Segment //seg to be sent from normal socket
 }
 
 func (node *Node) Make(args []string) {
@@ -33,7 +33,7 @@ func (node *Node) Make(args []string) {
 
 	node.socketTable = tcp.NewSocketTable()
 	node.segRecvChan = make(chan *proto.Segment)
-	node.segSendChan = make(chan *proto.SegmentMsg)
+	node.segSendChan = make(chan *proto.Segment)
 
 	node.RT = &network.RoutingTable{}
 	node.RT.Make(args, node.NodePktOpChan, node.NodeExChan, node.segRecvChan)

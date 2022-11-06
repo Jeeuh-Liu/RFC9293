@@ -49,7 +49,7 @@ func (table *SocketTable) OfferListener(port uint16) *VTCPListener {
 	listener.ID = table.counter
 	table.port2Listeners[port] = listener
 	table.id2Listeners[listener.ID] = listener
-	go listener.acceptLoop()
+	// go listener.acceptLoop()
 	table.counter++
 	return listener
 }

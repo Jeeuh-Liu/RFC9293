@@ -16,21 +16,21 @@ const (
 )
 
 type VTCPConn struct {
-	state      string
-	seqNum     uint32
-	ackNum     uint32
-	LocalAddr  net.IP
-	LocalPort  uint16
-	RemoteAddr net.IP
-	RemotePort uint16
-	windowSize uint16
-	ID         uint16
-	Buffer     chan *proto.Segment
-	Upstream   chan *proto.SegmentMsg
+	state           string
+	seqNum          uint32
+	ackNum          uint32
+	LocalAddr       net.IP
+	LocalPort       uint16
+	RemoteAddr      net.IP
+	RemotePort      uint16
+	windowSize      uint16
+	ID              uint16
+	SegRcvChan      chan *proto.Segment
+	NodeSegSendChan chan *proto.Segment
 }
 
 func NewNormalSocket(pkt *proto.Segment) *VTCPConn {
-	return &VTCPConn{
+	conn := &VTCPConn{
 		state: proto.SYN_RECV,
 		// seqNum: rand.Uint32(),
 		seqNum:     0xd599,
@@ -40,40 +40,32 @@ func NewNormalSocket(pkt *proto.Segment) *VTCPConn {
 		RemoteAddr: pkt.IPhdr.Src,
 		RemotePort: pkt.TCPhdr.SrcPort,
 		windowSize: DEFAULTWINDOWSIZE,
-		Buffer:     make(chan *proto.Segment),
+		SegRcvChan: make(chan *proto.Segment),
 	}
+	return conn
 }
 
 // Q: handle RST-?
 // TODO: resubmission
-func (conn *VTCPConn) SynRecv() {
+func (conn *VTCPConn) VTCPConnSynHandler() {
 	myDebug.Debugln("connection with %v:%v enter syn_recv state",
 		conn.RemoteAddr.String(), conn.RemotePort)
-	ack := &proto.Segment{
-		TCPhdr:  conn.buildTCPHdr(),
-		Payload: []byte{},
-	}
-	ack.TCPhdr.Flags |= header.TCPFlagSyn
-	conn.Upstream <- &proto.SegmentMsg{
-		SocketID: conn.ID,
-		Seg:      ack,
-	}
+	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagSyn|header.TCPFlagAck), []byte{})
+	fmt.Printf("Conn's Seq Num is %v\n", conn.seqNum)
+	conn.NodeSegSendChan <- seg
+	go conn.VTCPConnSegHandler()
+}
+
+func (conn *VTCPConn) VTCPConnSegHandler() {
 	for {
-		rev := <-conn.Buffer
-		fmt.Println(conn.ackNum, rev.TCPhdr.SeqNum)
-		if conn.seqNum+1 == rev.TCPhdr.AckNum {
+		segRev := <-conn.SegRcvChan
+		fmt.Println(conn.seqNum, segRev.TCPhdr.AckNum)
+		if conn.seqNum+1 == segRev.TCPhdr.AckNum {
 			conn.seqNum++
 			conn.state = proto.ESTABLISH
-			ack := &proto.Segment{
-				TCPhdr:  conn.buildTCPHdr(),
-				Payload: []byte{},
-			}
-			conn.Upstream <- &proto.SegmentMsg{
-				SocketID: conn.ID,
-				Seg:      ack,
-			}
+			seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck), []byte{})
+			conn.NodeSegSendChan <- seg
 		}
-
 	}
 }
 
@@ -82,14 +74,14 @@ func (conn *VTCPConn) GetTuple() string {
 		conn.LocalAddr.String(), conn.LocalPort)
 }
 
-func (conn *VTCPConn) buildTCPHdr() *header.TCPFields {
+func (conn *VTCPConn) buildTCPHdr(flags int) *header.TCPFields {
 	return &header.TCPFields{
 		SrcPort:       conn.LocalPort,
 		DstPort:       conn.RemotePort,
 		SeqNum:        conn.seqNum,
 		AckNum:        conn.ackNum,
 		DataOffset:    DEFAULTDATAOFFSET,
-		Flags:         header.TCPFlagAck,
+		Flags:         uint8(flags),
 		WindowSize:    conn.windowSize,
 		Checksum:      0,
 		UrgentPointer: 0,

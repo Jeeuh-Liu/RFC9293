@@ -15,7 +15,7 @@ type PktTCP struct {
 
 func NewPktTCP(IPSrc, IPDest string, msg []byte, ttl int) *PktTCP {
 	body := msg
-	header := NewTestHeader(IPSrc, IPDest, len(body), ttl)
+	header := NewTCPPktHeader(IPSrc, IPDest, len(body), ttl)
 	// fmt.Println("length of body is:", len(body))
 	tcpPkt := &PktTCP{
 		Header: header,

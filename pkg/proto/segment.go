@@ -23,17 +23,23 @@ type Segment struct {
 	Payload []byte
 }
 
-type SegmentMsg struct {
-	SocketID uint16
-	Seg      *Segment
-}
-
 func (segment *Segment) FormTuple() string {
-	remotPort := segment.TCPhdr.SrcPort
+	remotePort := segment.TCPhdr.SrcPort
 	localPort := segment.TCPhdr.DstPort
 	remotAddr := segment.IPhdr.Src.String()
 	localAddr := segment.IPhdr.Dst.String()
-	return fmt.Sprintf("%v:%v:%v:%v", remotAddr, remotPort, localAddr, localPort)
+	return fmt.Sprintf("%v:%v:%v:%v", remotAddr, remotePort, localAddr, localPort)
+}
+
+func NewSegment(IPSrc, IPDest string, tcpHdr *header.TCPFields, msg []byte) *Segment {
+	body := []byte(msg)
+	IPhdr := NewTCPPktHeader(IPSrc, IPDest, len(body), 0)
+	seg := &Segment{
+		IPhdr:   IPhdr,
+		TCPhdr:  tcpHdr,
+		Payload: msg,
+	}
+	return seg
 }
 
 func UnMarshalSegment(hdr *ipv4.Header, bytes []byte) (*Segment, error) {
