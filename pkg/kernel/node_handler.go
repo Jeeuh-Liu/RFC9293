@@ -27,8 +27,8 @@ func (node *Node) ReceiveOpFromChan() {
 			// fmt.Println(nodePktOp)
 			node.HandleNodePktOp(nodePktOp)
 		case segment := <-node.segSendChan:
-			// fmt.Println(segment)
-			node.sendOutSegment(segment)
+			fmt.Println(segment)
+			node.HandleSendOutSegment(segment)
 		}
 	}
 }
@@ -126,7 +126,7 @@ func (node *Node) HandlePrintRoutesToFile(filename string) {
 }
 
 func (node *Node) HandleSendPacket(destIP string, protoID int, msg string) {
-	node.RT.SendPacket(destIP, protoID, msg)
+	node.RT.SendPacket(destIP, msg)
 }
 
 func (node *Node) HandlePrintSockets() {

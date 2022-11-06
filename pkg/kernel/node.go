@@ -8,7 +8,6 @@ import (
 )
 
 // The driver program
-
 type Node struct {
 	// Network Layer
 	NodeCLIChan   chan *proto.NodeCLI   // Receive CLI from user
@@ -24,7 +23,6 @@ type Node struct {
 
 func (node *Node) Make(args []string) {
 	myDebug.InitDebugger()
-
 	// Initialize Channel
 	node.NodeCLIChan = make(chan *proto.NodeCLI)
 	node.NodeBCChan = make(chan *proto.NodeBC)
@@ -33,7 +31,7 @@ func (node *Node) Make(args []string) {
 
 	node.socketTable = tcp.NewSocketTable()
 	node.segRecvChan = make(chan *proto.Segment)
-	node.segSendChan = make(chan *proto.Segment)
+	node.segSendChan = make(chan *proto.Segment, 100)
 
 	node.RT = &network.RoutingTable{}
 	node.RT.Make(args, node.NodePktOpChan, node.NodeExChan, node.segRecvChan)

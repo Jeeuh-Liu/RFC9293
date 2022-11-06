@@ -31,7 +31,6 @@ func NewSocketTable() *SocketTable {
 func (table *SocketTable) PrintSockets() {
 	fmt.Printf("%-8v %-16v %-12v %-12v %-12v %-12v\n", "socket", "local-addr", "port", "dst-addr", "port", "status")
 	strings.Repeat("-", 60)
-	fmt.Println("----------------------------------------------------------------------")
 	// Print out Listener Conns
 	for i := 0; i < int(table.counter); i++ {
 		if conn, ok := table.id2Listeners[uint16(i)]; ok {

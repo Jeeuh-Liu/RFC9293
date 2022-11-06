@@ -12,7 +12,7 @@ import (
 
 // *****************************************************************************
 // Send a packet
-func (rt *RoutingTable) SendPacket(destIP string, protoID int, msg string) {
+func (rt *RoutingTable) SendPacket(destIP string, msg string) {
 	ttl := 16
 	if route, ok := rt.DestIP2Route[destIP]; ok && route.Cost < 16 {
 		// check if route.cost == inf => unreachable
@@ -21,7 +21,6 @@ func (rt *RoutingTable) SendPacket(destIP string, protoID int, msg string) {
 			if li.IPRemote == route.Next {
 				// fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
 				test := proto.NewPktTest(li.IPLocal, destIP, msg, ttl-1)
-
 				bytes := test.Marshal()
 				// proto.PrintHex(bytes)
 				li.SendPacket(bytes)
@@ -32,20 +31,20 @@ func (rt *RoutingTable) SendPacket(destIP string, protoID int, msg string) {
 	fmt.Println("destIP does not exist")
 }
 
-func (rt *RoutingTable) SendTCPPacket(destIP string, protoID int, msg string) {
+func (rt *RoutingTable) SendTCPPacket(srcIP, destIP string, msg string) {
 	ttl := 16
 	if route, ok := rt.DestIP2Route[destIP]; ok && route.Cost < 16 {
 		// check if route.cost == inf => unreachable
 		// Choose the link whose IPRemote == nextIP to send
 		for _, li := range rt.ID2Interface {
 			if li.IPRemote == route.Next {
-				fmt.Printf("Try to send a TCP packet from %v to %v\n", li.IPLocal, destIP)
+				fmt.Printf("Try to send a TCP packet from %v to %v\n", srcIP, destIP)
 				// tcpPkt := proto.NewPktTCP(li.IPLocal, destIP, []byte(msg), ttl-1)
-				tcpPkt := proto.NewPktTCP(li.IPLocal, destIP, []byte(msg), ttl-1)
-
+				tcpPkt := proto.NewPktTCP(srcIP, destIP, []byte(msg), ttl-1)
 				bytes := tcpPkt.Marshal()
 				// proto.PrintHex(bytes)
 				li.SendPacket(bytes)
+				fmt.Printf("TCP packet has been sent successfully\n")
 				return
 			}
 		}
@@ -254,8 +253,8 @@ func (rt *RoutingTable) ForwardTCPPkt(h *ipv4.Header, bytes []byte) {
 	// 2. Forwarding
 	// (1) Does this packet belong to me?
 	if _, ok := rt.LocalIPSet[destIP]; ok {
-		myDebug.Debugln("Rev one TCP packet")
 		rt.SegRevChan <- segment
+		myDebug.Debugln("Rev one TCP packet and send it to NodeRevChan")
 		return
 	}
 	// (2) Does packet match any route in the forwarding table?

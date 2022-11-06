@@ -58,7 +58,7 @@ func (node *Node) NodeAcceptLoop(listener *tcp.VTCPListener) {
 		conn.NodeSegSendChan = node.segSendChan
 		node.socketTable.OfferConn(conn)
 		//syn : 1
-		conn.VTCPConnSynHandler()
+		conn.VTCPConnSynRev()
 	}
 }
 
@@ -72,22 +72,22 @@ func (node *Node) HandleCreateConn(nodeCLI *proto.NodeCLI) {
 		return
 	}
 	conn := tcp.NewNormalSocket(0, nodeCLI.DestPort, node.socketTable.ConnPort, net.ParseIP(nodeCLI.DestIP), net.ParseIP(srcIP))
+	conn.NodeSegSendChan = node.segSendChan
 	node.socketTable.OfferConn(conn)
+	fmt.Println("New Socket has been created")
 	// Send SYN
-
+	conn.VTCPConnSynSend()
 }
 
 // *****************************************************************************************
-func (node *Node) sendOutSegment(seg *proto.Segment) {
+func (node *Node) HandleSendOutSegment(seg *proto.Segment) {
 	hdr := seg.TCPhdr
 	payload := seg.Payload
-	checksum := proto.ComputeTCPChecksum(hdr, seg.IPhdr.Src, seg.IPhdr.Dst, payload)
-	hdr.Checksum = checksum
 	tcpHeaderBytes := make(header.TCP, proto.TcpHeaderLen)
 	tcpHeaderBytes.Encode(hdr)
 	iPayload := make([]byte, 0, len(tcpHeaderBytes)+len(payload))
 	iPayload = append(iPayload, tcpHeaderBytes...)
 	iPayload = append(iPayload, []byte(payload)...)
 	// proto.PrintHex(iPayload)
-	node.RT.SendTCPPacket(seg.IPhdr.Dst.String(), proto.PROTOCOL_TCP, string(iPayload))
+	node.RT.SendTCPPacket(seg.IPhdr.Src.String(), seg.IPhdr.Dst.String(), string(iPayload))
 }

@@ -39,6 +39,8 @@ func NewSegment(IPSrc, IPDest string, tcpHdr *header.TCPFields, msg []byte) *Seg
 		TCPhdr:  tcpHdr,
 		Payload: msg,
 	}
+	checksum := ComputeTCPChecksum(tcpHdr, seg.IPhdr.Src, seg.IPhdr.Dst, body)
+	tcpHdr.Checksum = checksum
 	return seg
 }
 

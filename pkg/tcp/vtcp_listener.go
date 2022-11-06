@@ -34,7 +34,6 @@ func (listener *VTCPListener) VListenerAcceptLoop() error {
 			listener.localPort, segment.IPhdr.Src.String(), segment.TCPhdr.SrcPort)
 		// Notice we need to reverse dst and stc in segment to create a new conn
 		conn := NewNormalSocket(segment.TCPhdr.SeqNum, segment.TCPhdr.SrcPort, segment.TCPhdr.DstPort, segment.IPhdr.Src, segment.IPhdr.Dst)
-		// fmt.Println(conn.seqNum)
 		listener.ConnQueue <- conn
 	}
 }
