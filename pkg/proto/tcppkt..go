@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/google/netstack/tcpip/header"
 	"golang.org/x/net/ipv4"
 )
 
@@ -60,7 +61,7 @@ func NewTCPPktHeader(IPSrc, IPDest string, bodyLen, ttl int) *ipv4.Header {
 		Len:      20,
 		TOS:      0,
 		TotalLen: 20 + bodyLen,
-		Flags:    0,
+		Flags:    header.IPv4FlagDontFragment,
 		FragOff:  0,
 		TTL:      ttl,
 		Protocol: 6,

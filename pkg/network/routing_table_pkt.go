@@ -4,11 +4,68 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
 
+	"github.com/google/netstack/tcpip/header"
 	"golang.org/x/net/ipv4"
 )
 
+// *****************************************************************************
+// Send a packet
+func (rt *RoutingTable) SendPacket(destIP string, protoID int, msg string) {
+	ttl := 16
+	if route, ok := rt.DestIP2Route[destIP]; ok && route.Cost < 16 {
+		// check if route.cost == inf => unreachable
+		// Choose the link whose IPRemote == nextIP to send
+		for _, li := range rt.ID2Interface {
+			if li.IPRemote == route.Next {
+				// fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
+				test := proto.NewPktTest(li.IPLocal, destIP, msg, ttl-1)
+
+				bytes := test.Marshal()
+				// proto.PrintHex(bytes)
+				li.SendPacket(bytes)
+				return
+			}
+		}
+	}
+	fmt.Println("destIP does not exist")
+}
+
+func (rt *RoutingTable) SendTCPPacket(destIP string, protoID int, msg string) {
+	ttl := 16
+	if route, ok := rt.DestIP2Route[destIP]; ok && route.Cost < 16 {
+		// check if route.cost == inf => unreachable
+		// Choose the link whose IPRemote == nextIP to send
+		for _, li := range rt.ID2Interface {
+			if li.IPRemote == route.Next {
+				fmt.Printf("Try to send a TCP packet from %v to %v\n", li.IPLocal, destIP)
+				// tcpPkt := proto.NewPktTCP(li.IPLocal, destIP, []byte(msg), ttl-1)
+				test := proto.NewPktTest(li.IPLocal, destIP, msg, ttl-1)
+				if protoID == 6 {
+					test.Header.Protocol = 6
+					test.Header.Flags = header.IPv4FlagDontFragment
+				}
+				test.Header.Checksum = 0
+				headerBytes, err := test.Header.Marshal()
+				if err != nil {
+					log.Fatalln("Error marshalling header:  ", err)
+				}
+				test.Header.Checksum = int(proto.ComputeChecksum(headerBytes))
+
+				bytes := test.Marshal()
+				// proto.PrintHex(bytes)
+				li.SendPacket(bytes)
+				return
+			}
+		}
+	}
+	fmt.Println("destIP does not exist")
+}
+
+// *****************************************************************************
+// Receive a packet
 func (rt *RoutingTable) CheckPktValidity(bytes []byte, destAddr string) bool {
 	canMatch := false
 	isAlive := false
@@ -185,6 +242,43 @@ func (rt *RoutingTable) ForwardTestPkt(bytes []byte) {
 				test := proto.NewPktTest(srcIP, destIP, msg, ttl-1)
 				bytes := test.Marshal()
 				li.SendPacket(bytes)
+				return
+			}
+		}
+	}
+	// (3) Does the router have next hop?
+	fmt.Println("destIP does not exist")
+}
+
+// ***********************************************************************************
+// Handle TCP Packet
+func (rt *RoutingTable) ForwardTCPPkt(h *ipv4.Header, bytes []byte) {
+	segment, err := proto.UnMarshalSegment(h, bytes)
+	if err != nil {
+		return
+	}
+
+	srcIP := h.Src.String()
+	destIP := h.Dst.String()
+	msg := bytes
+	ttl := h.TTL
+	// 2. Forwarding
+	// (1) Does this packet belong to me?
+	if _, ok := rt.LocalIPSet[destIP]; ok {
+		myDebug.Debugln("Rev one TCP packet")
+		rt.SegRevChan <- segment
+		return
+	}
+	// (2) Does packet match any route in the forwarding table?
+	if route, ok := rt.DestIP2Route[destIP]; ok && route.Cost < 16 {
+		// Choose the link whose IPRemote == nextIP to send
+		for _, li := range rt.ID2Interface {
+			if li.IPRemote == route.Next {
+				fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
+				segment := proto.NewPktTCP(srcIP, destIP, msg, ttl-1)
+				bytes := segment.Marshal()
+				li.SendPacket(bytes)
+				myDebug.Debugln("Forward one TCP packet")
 				return
 			}
 		}

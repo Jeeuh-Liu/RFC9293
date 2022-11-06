@@ -1,4 +1,4 @@
-package network
+package kernel
 
 import (
 	"fmt"
@@ -10,16 +10,19 @@ import (
 	"github.com/google/netstack/tcpip/header"
 )
 
-func (node *Node) handleTCP() {
+func (node *Node) handleTCPSegment() {
 	for {
 		segment := <-node.segRecvChan
 		tuple := segment.FormTuple()
-		fmt.Println(tuple)
+		// fmt.Println(tuple)
+		myDebug.Debugln("Receive a TCP packet from %v", tuple)
 		if conn := node.socketTable.FindConn(tuple); conn != nil {
 			myDebug.Debugln("%v:%v receive packet from %v:%v, SEQ: %v, ACK %v",
 				conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
 				conn.RemotePort, segment.TCPhdr.SeqNum, segment.TCPhdr.AckNum)
+
 			conn.Buffer <- segment
+			continue
 		}
 		dstPort := segment.TCPhdr.DstPort
 		listener := node.socketTable.FindListener(dstPort)
@@ -29,6 +32,8 @@ func (node *Node) handleTCP() {
 	}
 }
 
+// *****************************************************************************************
+// Handle Create Listener
 func (node *Node) handleCreateListener(msg *proto.NodeCLI) {
 	val, _ := strconv.Atoi(msg.Msg)
 	port := uint16(val)
@@ -55,6 +60,7 @@ func (node *Node) acceptConn(listener *tcp.VTCPListener) {
 	}
 }
 
+// *****************************************************************************************
 func (node *Node) sendOutSegment(msg *proto.SegmentMsg) {
 	conn := node.socketTable.FindConnByID(msg.SocketID)
 	hdr := msg.Seg.TCPhdr
@@ -67,5 +73,5 @@ func (node *Node) sendOutSegment(msg *proto.SegmentMsg) {
 	iPayload = append(iPayload, tcpHeaderBytes...)
 	iPayload = append(iPayload, []byte(payload)...)
 	// proto.PrintHex(iPayload)
-	node.RT.SendPacket(conn.RemoteAddr.String(), proto.PROTOCOL_TCP, string(iPayload))
+	node.RT.SendTCPPacket(conn.RemoteAddr.String(), proto.PROTOCOL_TCP, string(iPayload))
 }

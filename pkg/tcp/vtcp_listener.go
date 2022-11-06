@@ -10,7 +10,7 @@ import (
 
 type VTCPListener struct {
 	ID          uint16
-	state       uint8
+	state       string
 	localPort   uint16
 	spawnChan   chan *VTCPConn
 	AcceptQueue chan *proto.Segment
@@ -23,17 +23,19 @@ func NewListener(port uint16) *VTCPListener {
 		spawnChan:   make(chan *VTCPConn),
 		AcceptQueue: make(chan *proto.Segment),
 	}
-	go listener.acceptLoop()
+	// go listener.acceptLoop()
 	return listener
 }
 
 func (listener *VTCPListener) acceptLoop() error {
 	for {
-		packet := <-listener.AcceptQueue
-		if packet.TCPhdr.Flags == header.TCPFlagSyn {
+		segment := <-listener.AcceptQueue
+		if segment.TCPhdr.Flags == header.TCPFlagSyn {
+			// Check if socket for the application of the same port has been created
 			myDebug.Debugln("socket listening on %v receives a request from %v:%v",
-				listener.localPort, packet.IPhdr.Src.String(), packet.TCPhdr.SrcPort)
-			conn := NewNormalSocket(packet)
+				listener.localPort, segment.IPhdr.Src.String(), segment.TCPhdr.SrcPort)
+			conn := NewNormalSocket(segment)
+			fmt.Println(conn.seqNum)
 			listener.spawnChan <- conn
 		}
 	}

@@ -5,9 +5,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"tcpip/pkg/proto"
-
-	"github.com/google/netstack/tcpip/header"
 )
 
 func (rt *RoutingTable) PrintInterfaces() {
@@ -94,34 +91,4 @@ func (rt *RoutingTable) PrintRoutesToFile(filename string) {
 			}
 		}
 	}
-}
-
-func (rt *RoutingTable) SendPacket(destIP string, protoID int, msg string) {
-	ttl := 16
-	if route, ok := rt.DestIP2Route[destIP]; ok && route.Cost < 16 {
-		// check if route.cost == inf => unreachable
-		// Choose the link whose IPRemote == nextIP to send
-		for _, li := range rt.ID2Interface {
-			if li.IPRemote == route.Next {
-				// fmt.Printf("Try to send a packet from %v to %v\n", li.IPLocal, destIP)
-				test := proto.NewPktTest(li.IPLocal, destIP, msg, ttl-1)
-				if protoID == 6 {
-					test.Header.Protocol = 6
-					test.Header.Flags = header.IPv4FlagDontFragment
-				}
-				test.Header.Checksum = 0
-				headerBytes, err := test.Header.Marshal()
-				if err != nil {
-					log.Fatalln("Error marshalling header:  ", err)
-				}
-				test.Header.Checksum = int(proto.ComputeChecksum(headerBytes))
-
-				bytes := test.Marshal()
-				// proto.PrintHex(bytes)
-				li.SendPacket(bytes)
-				return
-			}
-		}
-	}
-	fmt.Println("destIP does not exist")
 }

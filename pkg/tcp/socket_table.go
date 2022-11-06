@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -26,16 +27,17 @@ func NewSocketTable() *SocketTable {
 }
 
 func (table *SocketTable) PrintSockets() {
-	fmt.Println("socket  local-addr      port            dst-addr        port    status")
+	fmt.Printf("%-8v %-16v %-12v %-12v %-12v %-12v\n", "socket", "local-addr", "port", "dst-addr", "port", "status")
+	strings.Repeat("-", 60)
 	fmt.Println("----------------------------------------------------------------------")
 	// Print out Listener Conns
 	for i := 0; i < int(table.counter); i++ {
 		if conn, ok := table.id2Listeners[uint16(i)]; ok {
-			fmt.Printf("%v       0.0.0.0        %v            0.0.0.0       0.0.0.0      %v\n", i, conn.localPort, conn.state)
+			fmt.Printf("%-8v %-16v %-12v %-12v %-12v %-12v\n", i, "0.0.0.0", conn.localPort, "0.0.0.0", "0", conn.state)
 		} else {
 			conn := table.id2Conns[uint16(i)]
 			// 0       10.0.0.1        1024            10.0.0.14       80      ESTAB
-			fmt.Printf("%v       %v        %v            %v       %v      %v\n", i, conn.LocalAddr, conn.LocalPort, conn.RemoteAddr, conn.RemotePort, conn.state)
+			fmt.Printf("%-8v %-16v %-12v %-12v %-12v %-12v \n", i, conn.LocalAddr, conn.LocalPort, conn.RemoteAddr, conn.RemotePort, conn.state)
 		}
 	}
 }

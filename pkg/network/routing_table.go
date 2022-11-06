@@ -20,6 +20,8 @@ type RoutingTable struct {
 	NodeExChan chan *proto.NodeEx // Handle expiration of route
 	// Routes
 	DestIP2Route map[string]Route //store routes and facilitate finding target route for Test Packet
+	// TCP Packet
+	SegRevChan chan *proto.Segment
 	// RIP metadata
 	LocalIPSet         map[string]bool      // store all local IP in this rt to facilitate test packet checking
 	RemoteDestIP2Cost  map[string]uint32    // store min cost of each route
@@ -27,7 +29,7 @@ type RoutingTable struct {
 	RemoteDest2ExTime  map[string]time.Time // store expiration time of each route to Check Expiration time of a new route
 }
 
-func (rt *RoutingTable) Make(args []string, nodePktOpChan chan *proto.NodePktOp, nodeExChan chan *proto.NodeEx) {
+func (rt *RoutingTable) Make(args []string, nodePktOpChan chan *proto.NodePktOp, nodeExChan chan *proto.NodeEx, segRevChan chan *proto.Segment) {
 	// Initialize ID2Interface and node packet channel
 	rt.ID2Interface = make(map[uint8]*link.LinkInterface)
 	// the interfaces need nodePktOpChan to pass received bytes
@@ -36,6 +38,8 @@ func (rt *RoutingTable) Make(args []string, nodePktOpChan chan *proto.NodePktOp,
 	rt.NodeExChan = nodeExChan
 	// Initialize Routes: each interface to itself
 	rt.DestIP2Route = map[string]Route{}
+	// TCP Packet
+	rt.SegRevChan = segRevChan
 	// initialize local IP set
 	rt.LocalIPSet = map[string]bool{}
 	for _, li := range rt.ID2Interface {
@@ -98,4 +102,8 @@ func (rt *RoutingTable) InitializeInterfaces(args []string, nodePktOpChan chan *
 		rt.ID2Interface[id] = li
 		id++
 	}
+}
+
+func ToIPColonAddr(udpIp, udpPort string) string {
+	return fmt.Sprintf("%v:%v", udpIp, udpPort)
 }

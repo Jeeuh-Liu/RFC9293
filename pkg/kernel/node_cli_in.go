@@ -1,4 +1,4 @@
-package network
+package kernel
 
 import (
 	"bufio"
@@ -131,12 +131,4 @@ func (node *Node) RIPRespDaemon() {
 func (node *Node) RIPReqDaemon() {
 	cli := proto.NewNodeBC(proto.MESSAGE_BCRIPREQ, 0, []byte{}, "", 0, "")
 	node.NodeBCChan <- cli
-}
-
-// Send NodeEx
-func (rt *RoutingTable) SendExTimeCLI(destIP string) {
-	// sleep 12 second and check whether the time expires
-	time.Sleep(13 * time.Second)
-	cli := proto.NewNodeEx(proto.MESSAGE_ROUTEEX, 0, []byte{}, destIP, 0, "")
-	rt.NodeExChan <- cli
 }

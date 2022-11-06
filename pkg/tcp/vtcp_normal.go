@@ -16,7 +16,7 @@ const (
 )
 
 type VTCPConn struct {
-	state      uint8
+	state      string
 	seqNum     uint32
 	ackNum     uint32
 	LocalAddr  net.IP
@@ -32,7 +32,7 @@ type VTCPConn struct {
 func NewNormalSocket(pkt *proto.Segment) *VTCPConn {
 	return &VTCPConn{
 		state: proto.SYN_RECV,
-		// seqNum:     rand.Uint32(),
+		// seqNum: rand.Uint32(),
 		seqNum:     0xd599,
 		ackNum:     pkt.TCPhdr.SeqNum + 1,
 		LocalPort:  pkt.TCPhdr.DstPort,
@@ -60,7 +60,8 @@ func (conn *VTCPConn) SynRecv() {
 	}
 	for {
 		rev := <-conn.Buffer
-		if conn.ackNum == rev.TCPhdr.SeqNum+1 {
+		fmt.Println(conn.ackNum, rev.TCPhdr.SeqNum)
+		if conn.seqNum+1 == rev.TCPhdr.AckNum {
 			conn.seqNum++
 			conn.state = proto.ESTABLISH
 			ack := &proto.Segment{
@@ -71,7 +72,6 @@ func (conn *VTCPConn) SynRecv() {
 				SocketID: conn.ID,
 				Seg:      ack,
 			}
-			return
 		}
 
 	}
