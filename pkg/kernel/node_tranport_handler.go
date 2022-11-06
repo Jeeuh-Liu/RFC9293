@@ -57,13 +57,13 @@ func (node *Node) NodeAcceptLoop(listener *tcp.VTCPListener) {
 		}
 		conn.NodeSegSendChan = node.segSendChan
 		node.socketTable.OfferConn(conn)
-		//syn : 1
+		// Recv SYN
 		conn.VTCPConnSynRev()
 	}
 }
 
 // *****************************************************************************************
-// Handle Create Listener
+// Handle Create Conn
 func (node *Node) HandleCreateConn(nodeCLI *proto.NodeCLI) {
 	// Create a Normal Socket
 	srcIP := node.RT.FindSrcIPAddr(nodeCLI.DestIP)

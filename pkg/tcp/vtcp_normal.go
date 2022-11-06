@@ -58,14 +58,13 @@ func (conn *VTCPConn) VTCPConnSynRev() {
 func (conn *VTCPConn) VTCPConnSynAckSend() {
 	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagSyn|header.TCPFlagAck), []byte{})
 	conn.NodeSegSendChan <- seg
-	fmt.Printf("[SYNACK] Push 1 msg into SegSendChan\n")
+	// fmt.Printf("[SYNACK] Push 1 msg into SegSendChan\n")
 }
 
 func (conn *VTCPConn) VTCPConnAckRev() {
 	for {
 		segRev := <-conn.SegRcvChan
-		fmt.Println(conn.seqNum, segRev.TCPhdr.AckNum, segRev.TCPhdr.Flags)
-		// fmt.Println(conn.seqNum, segRev.TCPhdr.AckNum)
+		// fmt.Println(conn.seqNum, segRev.TCPhdr.AckNum, segRev.TCPhdr.Flags)
 		if conn.seqNum+1 == segRev.TCPhdr.AckNum {
 			conn.seqNum++
 			conn.state = proto.ESTABLISH
@@ -100,7 +99,7 @@ func (conn *VTCPConn) buildTCPHdr(flags int) *header.TCPFields {
 func (conn *VTCPConn) VTCPConnSynSend() {
 	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagSyn), []byte{})
 	conn.NodeSegSendChan <- seg
-	fmt.Printf("[SYN] Push 1 msg into SegSendChan\n")
+	// fmt.Printf("[SYN] Push 1 msg into SegSendChan\n")
 	go conn.VTCPConnSYNAckRev()
 }
 
@@ -111,11 +110,16 @@ func (conn *VTCPConn) VTCPConnSYNAckRev() {
 		if conn.seqNum+1 == segRev.TCPhdr.AckNum {
 			conn.seqNum++
 			conn.state = proto.ESTABLISH
+			// Notice that we need to update seq num here
 			conn.ackNum = segRev.TCPhdr.SeqNum + 1
-			seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck), []byte{})
-			conn.NodeSegSendChan <- seg
-			fmt.Printf("[ACK] Push 1 msg into SegSendChan\n")
+			conn.VTCPConnAckSend()
 			return
 		}
 	}
+}
+
+func (conn *VTCPConn) VTCPConnAckSend() {
+	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck), []byte{})
+	conn.NodeSegSendChan <- seg
+	// fmt.Printf("[ACK] Push 1 msg into SegSendChan\n")
 }
