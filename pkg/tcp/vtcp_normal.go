@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
 
 	"github.com/google/netstack/tcpip/header"
@@ -48,33 +49,66 @@ func NewNormalSocket(seqNum uint32, dstPort, srcPort uint16, dstIP, srcIP net.IP
 // Server
 // Q: handle RST-?
 // TODO: resubmission
-func (conn *VTCPConn) VTCPConnSynRev() {
-	// myDebug.Debugln("connection with %v:%v enter syn_recv state",
-	// conn.RemoteAddr.String(), conn.RemotePort)
-	conn.VTCPConnSynAckSend()
-	go conn.VTCPConnAckRev()
-}
-
-func (conn *VTCPConn) VTCPConnSynAckSend() {
+func (conn *VTCPConn) SynRev() {
 	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagSyn|header.TCPFlagAck), []byte{})
 	conn.NodeSegSendChan <- seg
-	// fmt.Printf("[SYNACK] Push 1 msg into SegSendChan\n")
-}
-
-func (conn *VTCPConn) VTCPConnAckRev() {
 	for {
 		segRev := <-conn.SegRcvChan
-		// fmt.Println(conn.seqNum, segRev.TCPhdr.AckNum, segRev.TCPhdr.Flags)
 		if conn.seqNum+1 == segRev.TCPhdr.AckNum {
-			conn.seqNum++
 			conn.state = proto.ESTABLISH
-			// seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck), []byte{})
-			// conn.NodeSegSendChan <- seg
 			return
 		}
 	}
 }
 
+// ********************************************************************************************
+// Client
+func (conn *VTCPConn) SynSend() {
+	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagSyn), []byte{})
+	conn.NodeSegSendChan <- seg
+	myDebug.Debugln("%v sent connection request to %v, SEQ: %v", conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.seqNum)
+	for {
+		segRev := <-conn.SegRcvChan
+		if conn.seqNum+1 == segRev.TCPhdr.AckNum {
+			conn.seqNum++
+			conn.ackNum = segRev.TCPhdr.SeqNum + 1
+			conn.send([]byte{})
+			conn.state = proto.ESTABLISH
+			return
+		}
+	}
+}
+
+func (conn *VTCPConn) send(content []byte) {
+	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck), content)
+	conn.NodeSegSendChan <- seg
+	myDebug.Debugln("%v sent segment to %v, SEQ: %v, ACK: %v, Payload: %v",
+		conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.seqNum, conn.ackNum, string(seg.Payload))
+}
+
+func (conn *VTCPConn) SimpleSend(content []byte) {
+	mtu := proto.DEFAULTPACKETMTU - proto.DEFAULTIPHDRLEN - proto.DEFAULTTCPHDRLEN
+	for len(content) > 0 {
+		var payload []byte
+		if len(content) <= mtu {
+			payload = content
+			content = []byte{}
+		} else {
+			payload = content[:mtu]
+			content = content[mtu:]
+		}
+		conn.send(payload)
+		conn.seqNum += uint32(len(payload))
+		segRev := <-conn.SegRcvChan
+		if conn.seqNum+1 == segRev.TCPhdr.AckNum {
+			conn.seqNum++
+			conn.ackNum = segRev.TCPhdr.SeqNum + 1
+		}
+	}
+}
+
+// ********************************************************************************************
+// helper function
 func (conn *VTCPConn) GetTuple() string {
 	return fmt.Sprintf("%v:%v:%v:%v", conn.RemoteAddr.String(), conn.RemotePort,
 		conn.LocalAddr.String(), conn.LocalPort)
@@ -92,34 +126,4 @@ func (conn *VTCPConn) buildTCPHdr(flags int) *header.TCPFields {
 		Checksum:      0,
 		UrgentPointer: 0,
 	}
-}
-
-// ********************************************************************************************
-// Client
-func (conn *VTCPConn) VTCPConnSynSend() {
-	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagSyn), []byte{})
-	conn.NodeSegSendChan <- seg
-	// fmt.Printf("[SYN] Push 1 msg into SegSendChan\n")
-	go conn.VTCPConnSYNAckRev()
-}
-
-func (conn *VTCPConn) VTCPConnSYNAckRev() {
-	for {
-		segRev := <-conn.SegRcvChan
-		fmt.Println(conn.seqNum, segRev.TCPhdr.AckNum, segRev.TCPhdr.Flags)
-		if conn.seqNum+1 == segRev.TCPhdr.AckNum {
-			conn.seqNum++
-			conn.state = proto.ESTABLISH
-			// Notice that we need to update seq num here
-			conn.ackNum = segRev.TCPhdr.SeqNum + 1
-			conn.VTCPConnAckSend()
-			return
-		}
-	}
-}
-
-func (conn *VTCPConn) VTCPConnAckSend() {
-	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck), []byte{})
-	conn.NodeSegSendChan <- seg
-	// fmt.Printf("[ACK] Push 1 msg into SegSendChan\n")
 }

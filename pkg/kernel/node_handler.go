@@ -27,7 +27,6 @@ func (node *Node) ReceiveOpFromChan() {
 			// fmt.Println(nodePktOp)
 			node.HandleNodePktOp(nodePktOp)
 		case segment := <-node.segSendChan:
-			fmt.Println(segment)
 			node.HandleSendOutSegment(segment)
 		}
 	}
@@ -68,6 +67,9 @@ func (node *Node) HandleNodeCLI(nodeCLI *proto.NodeCLI) {
 		fmt.Printf("> ")
 	case proto.CLI_CREATECONN:
 		node.HandleCreateConn(nodeCLI)
+		fmt.Printf("> ")
+	case proto.CLI_SENDSEGMENT:
+		node.handleSendSegment(nodeCLI)
 		fmt.Printf("> ")
 	}
 }

@@ -36,4 +36,8 @@ const (
 
 	// the first port we allocate for conn
 	FIRST_PORT = 0
+
+	DEFAULTPACKETMTU = 1400
+	DEFAULTIPHDRLEN  = 20
+	DEFAULTTCPHDRLEN = 20
 )

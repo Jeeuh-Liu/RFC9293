@@ -15,8 +15,6 @@ func (node *Node) handleTCPSegment() {
 	for {
 		segment := <-node.segRecvChan
 		tuple := segment.FormTuple()
-		// fmt.Println(tuple)
-		myDebug.Debugln("Receive a TCP packet from %v", tuple)
 		// 2nd & 3rd handshake
 		if conn := node.socketTable.FindConn(tuple); conn != nil {
 			myDebug.Debugln("%v:%v receive packet from %v:%v, SEQ: %v, ACK %v",
@@ -58,7 +56,7 @@ func (node *Node) NodeAcceptLoop(listener *tcp.VTCPListener) {
 		conn.NodeSegSendChan = node.segSendChan
 		node.socketTable.OfferConn(conn)
 		// Recv SYN
-		conn.VTCPConnSynRev()
+		go conn.SynRev()
 	}
 }
 
@@ -74,9 +72,17 @@ func (node *Node) HandleCreateConn(nodeCLI *proto.NodeCLI) {
 	conn := tcp.NewNormalSocket(0, nodeCLI.DestPort, node.socketTable.ConnPort, net.ParseIP(nodeCLI.DestIP), net.ParseIP(srcIP))
 	conn.NodeSegSendChan = node.segSendChan
 	node.socketTable.OfferConn(conn)
-	fmt.Println("New Socket has been created")
-	// Send SYN
-	conn.VTCPConnSynSend()
+	go conn.SynSend()
+}
+
+func (node *Node) handleSendSegment(nodeCLI *proto.NodeCLI) {
+	socketID := nodeCLI.Val16
+	conn := node.socketTable.FindConnByID(socketID)
+	if conn == nil {
+		fmt.Printf("no VTCPConn with socket ID %v\n", socketID)
+		return
+	}
+	go conn.SimpleSend(nodeCLI.Bytes)
 }
 
 // *****************************************************************************************

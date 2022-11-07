@@ -38,13 +38,11 @@ func (rt *RoutingTable) SendTCPPacket(srcIP, destIP string, msg string) {
 		// Choose the link whose IPRemote == nextIP to send
 		for _, li := range rt.ID2Interface {
 			if li.IPRemote == route.Next {
-				fmt.Printf("Try to send a TCP packet from %v to %v\n", srcIP, destIP)
 				// tcpPkt := proto.NewPktTCP(li.IPLocal, destIP, []byte(msg), ttl-1)
 				tcpPkt := proto.NewPktTCP(srcIP, destIP, []byte(msg), ttl-1)
 				bytes := tcpPkt.Marshal()
 				// proto.PrintHex(bytes)
 				li.SendPacket(bytes)
-				fmt.Printf("TCP packet has been sent successfully\n")
 				return
 			}
 		}
@@ -254,7 +252,6 @@ func (rt *RoutingTable) ForwardTCPPkt(h *ipv4.Header, bytes []byte) {
 	// (1) Does this packet belong to me?
 	if _, ok := rt.LocalIPSet[destIP]; ok {
 		rt.SegRevChan <- segment
-		myDebug.Debugln("Rev one TCP packet and send it to NodeRevChan")
 		return
 	}
 	// (2) Does packet match any route in the forwarding table?

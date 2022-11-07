@@ -12,6 +12,7 @@ type NodeCLI struct {
 	ProtoID  int
 	Msg      string
 	Filename string
+	Val16    uint16
 }
 
 func NewNodeCLI(cliType, id uint8, bytes []byte, destIP string, destPort uint16, protoID int, msg string, filename string) *NodeCLI {

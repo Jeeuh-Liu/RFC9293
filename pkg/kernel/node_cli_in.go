@@ -121,6 +121,14 @@ func (node *Node) ScanClI() {
 				}
 				cli := proto.NewNodeCLI(proto.CLI_CREATECONN, 0, []byte{}, ipAddr, uint16(port), 0, "", "")
 				node.NodeCLIChan <- cli
+			} else if len(ws) == 3 && ws[0] == "s" {
+				id, err := strconv.Atoi(ws[1])
+				if err != nil {
+					return
+				}
+				content := []byte(ws[2])
+				cli := &proto.NodeCLI{CLIType: proto.CLI_SENDSEGMENT, Val16: uint16(id), Bytes: content}
+				node.NodeCLIChan <- cli
 			} else {
 				fmt.Printf("Invalid command\n> ")
 			}
