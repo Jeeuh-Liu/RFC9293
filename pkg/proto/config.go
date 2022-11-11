@@ -44,5 +44,5 @@ const (
 
 	// Send Buffer
 	// BUFFER_SIZE = 1 << 16
-	BUFFER_SIZE = uint32(25)
+	BUFFER_SIZE = uint32(10)
 )

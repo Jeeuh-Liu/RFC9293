@@ -11,8 +11,9 @@ type SendBuffer struct {
 	una    uint32 // oldest unacked byte
 	nxt    uint32 // next byte to send
 	lbw    uint32 // last bytes written
-	total  uint32 // total number of bytes in buffer
-	win    uint32 // window size in send buffer
+	//
+	total uint32 // total number of bytes in buffer
+	win   uint32 // window size in send buffer
 }
 
 func NewSendBuffer(seqNum, winSize uint32) *SendBuffer {
@@ -66,8 +67,9 @@ func (sb *SendBuffer) CanSend() bool {
 	return sb.nxt < sb.lbw
 }
 
-func (sb *SendBuffer) UpdateNxt(mtu int, seqNum uint32) []byte {
+func (sb *SendBuffer) UpdateNxt(mtu int) ([]byte, uint32) {
 	var len uint32
+	seqNum := sb.nxt
 	if sb.nxt+uint32(mtu) > sb.lbw {
 		len = sb.lbw - sb.nxt
 		// payload = sb.buffer[sb.getIdx(sb.nxt):sb.getIdx(sb.lbw)]
@@ -78,7 +80,7 @@ func (sb *SendBuffer) UpdateNxt(mtu int, seqNum uint32) []byte {
 
 	payload := make([]byte, len)
 	if sb.getIdx(sb.nxt)+len < proto.BUFFER_SIZE {
-		// copy all
+		// copy all, notice that there must be <, <= will cause range problem like [9:0]
 		copy(payload, sb.buffer[sb.getIdx(sb.nxt):sb.getIdx(sb.nxt+len)])
 	} else {
 		// copy right and left
@@ -88,7 +90,7 @@ func (sb *SendBuffer) UpdateNxt(mtu int, seqNum uint32) []byte {
 	}
 	// Update metadata of send buffer
 	sb.nxt += len
-	return payload
+	return payload, seqNum
 }
 
 // *********************************************************************************************

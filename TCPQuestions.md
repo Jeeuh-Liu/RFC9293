@@ -43,12 +43,6 @@ Window: [UNA NXT - 1]
 
 
 
-Send:
-
-- 
-
-
-
 # Receiver:
 
 Does the receiver need to keep a data structure for to accumulate segments to send ACK -> No, loss of ACK will make the sender to retransmit a packet to get another ACK
