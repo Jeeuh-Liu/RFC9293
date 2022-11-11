@@ -178,11 +178,20 @@ func (conn *VTCPConn) VSBufferRcv() {
 func (conn *VTCPConn) retransmissionLoop() {
 	for {
 		segR := <-conn.rtmQueue
-		if segR.TCPhdr.AckNum <= conn.seqNum {
-			continue
-		}
-		conn.rtmQueue <- segR
+		go conn.retransmit(segR)
 	}
+}
+
+func (conn *VTCPConn) retransmit(segR *proto.Segment) {
+	time.Sleep(100 * time.Millisecond)
+	conn.mu.Lock()
+	defer conn.mu.Unlock()
+	if segR.TCPhdr.AckNum <= conn.seqNum {
+		myDebug.Debugln("[SendBuffer_RevACK] Segment with SEQ: %v, have been acked",
+			segR.TCPhdr.SeqNum)
+		return
+	}
+	conn.rtmQueue <- segR
 }
 
 // ********************************************************************************************
