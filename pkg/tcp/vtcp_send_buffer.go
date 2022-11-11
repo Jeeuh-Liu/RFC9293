@@ -6,26 +6,24 @@ import (
 )
 
 type SendBuffer struct {
-	buffer  []byte
-	isn     uint32 // initial sequence number
-	una     uint32 // oldest unacked byte
-	nxt     uint32 // next byte to send
-	lbw     uint32 // last bytes written
-	total   uint32 // total number of bytes in buffer
-	win     uint32 // window size in send buffer
-	seq2ack map[uint32]uint32
+	buffer []byte
+	isn    uint32 // initial sequence number
+	una    uint32 // oldest unacked byte
+	nxt    uint32 // next byte to send
+	lbw    uint32 // last bytes written
+	total  uint32 // total number of bytes in buffer
+	win    uint32 // window size in send buffer
 }
 
 func NewSendBuffer(seqNum, winSize uint32) *SendBuffer {
 	sb := &SendBuffer{
-		buffer:  make([]byte, proto.BUFFER_SIZE),
-		isn:     seqNum,
-		una:     seqNum,
-		nxt:     seqNum,
-		lbw:     seqNum,
-		total:   0,
-		win:     winSize,
-		seq2ack: make(map[uint32]uint32),
+		buffer: make([]byte, proto.BUFFER_SIZE),
+		isn:    seqNum,
+		una:    seqNum,
+		nxt:    seqNum,
+		lbw:    seqNum,
+		total:  0,
+		win:    winSize,
 	}
 	// fmt.Printf("window size is %v\n", winSize)
 	return sb
@@ -49,10 +47,10 @@ func (sb *SendBuffer) WriteIntoBuffer(content []byte) uint32 {
 		copy(sb.buffer[sb.getIdx(sb.lbw):], content)
 	} else {
 		// 2.(2) Otherwise, write twice
-		// <1> write right part of content into end of buffer
+		// <1> write part of content into right part of buffer
 		copy(sb.buffer[sb.getIdx(sb.lbw):], content[:remainBack])
 		content2 := content[remainBack:]
-		// <2> write left part of content into start of buffer
+		// <2> write remaining part of content into left of buffer
 		copy(sb.buffer, content2)
 	}
 	fmt.Println(sb.buffer)
@@ -90,16 +88,14 @@ func (sb *SendBuffer) UpdateNxt(mtu int, seqNum uint32) []byte {
 	}
 	// Update metadata of send buffer
 	sb.nxt += len
-	ackNum := seqNum + len
-	sb.seq2ack[seqNum] = ackNum
 	return payload
 }
 
 // *********************************************************************************************
 // Receive out one ACK
 func (sb *SendBuffer) UpdateUNA(ack *proto.Segment) {
+	ackNum := ack.TCPhdr.AckNum
 	if ack.TCPhdr.AckNum > sb.una {
-		ackNum := sb.seq2ack[sb.una]
 		// length of payload is (ackNum - sb.una)
 		sb.total -= (ackNum - sb.una)
 		sb.una = ackNum
