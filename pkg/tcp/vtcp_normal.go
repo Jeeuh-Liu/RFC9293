@@ -64,6 +64,7 @@ func NewNormalSocket(seqNumber uint32, dstPort, srcPort uint16, dstIP, srcIP net
 func (conn *VTCPConn) SynSend() {
 	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagSyn, conn.seqNum), []byte{})
 	conn.NodeSegSendChan <- seg
+	conn.rtmQueue <- seg
 	myDebug.Debugln("%v sent connection request to %v, SEQ: %v", conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.seqNum)
 	// Rev Syn+ACK
 	for {
@@ -178,19 +179,46 @@ func (conn *VTCPConn) VSBufferRcv() {
 func (conn *VTCPConn) retransmissionLoop() {
 	for {
 		segR := <-conn.rtmQueue
-		go conn.retransmit(segR)
+		switch segR.TCPhdr.Flags {
+		case header.TCPFlagAck:
+			// retransmit Ack
+			go conn.retransmitACK(segR)
+		default:
+			// retransmit Syn / SynAck
+			go conn.retransmitHS(segR)
+		}
 	}
 }
 
-func (conn *VTCPConn) retransmit(segR *proto.Segment) {
+func (conn *VTCPConn) retransmitHS(segR *proto.Segment) {
 	time.Sleep(100 * time.Millisecond)
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
-	if segR.TCPhdr.AckNum <= conn.seqNum {
+	// for handshake segments, seq number should increment by 1
+	if conn.seqNum >= segR.TCPhdr.SeqNum+1 {
 		myDebug.Debugln("[SendBuffer_RevACK] Segment with SEQ: %v, have been acked",
 			segR.TCPhdr.SeqNum)
 		return
 	}
+	// retransmit if not acked
+	fmt.Println("retransmit 1 HS segment")
+	conn.NodeSegSendChan <- segR
+	conn.rtmQueue <- segR
+}
+
+func (conn *VTCPConn) retransmitACK(segR *proto.Segment) {
+	time.Sleep(100 * time.Millisecond)
+	conn.mu.Lock()
+	defer conn.mu.Unlock()
+	// for ACK segments, seq number should increment by len(payload)
+	if conn.seqNum >= segR.TCPhdr.SeqNum+uint32(len(segR.Payload)) {
+		myDebug.Debugln("[SendBuffer_RevACK] Segment with SEQ: %v, have been acked",
+			segR.TCPhdr.SeqNum)
+		return
+	}
+	// retransmit if not acked
+	fmt.Println("retransmit 1 ACK segment")
+	conn.NodeSegSendChan <- segR
 	conn.rtmQueue <- segR
 }
 
