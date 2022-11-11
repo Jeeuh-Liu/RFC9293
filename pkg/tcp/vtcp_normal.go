@@ -9,7 +9,6 @@ import (
 	"tcpip/pkg/proto"
 	"time"
 
-	"github.com/gammazero/deque"
 	"github.com/google/netstack/tcpip/header"
 )
 
@@ -36,8 +35,8 @@ type VTCPConn struct {
 	sCv sync.Cond
 	sb  *SendBuffer // send buffer
 	// Retransmission
-	rtmQueue      *deque.Deque[*proto.Segment] // retransmission queue
-	seq2timestamp map[uint32]time.Time         // seq # of 1 segment to expiration time
+	rtmQueue      chan *proto.Segment  // retransmission queue
+	seq2timestamp map[uint32]time.Time // seq # of 1 segment to expiration time
 }
 
 func NewNormalSocket(seqNumber uint32, dstPort, srcPort uint16, dstIP, srcIP net.IP) *VTCPConn {
@@ -53,9 +52,10 @@ func NewNormalSocket(seqNumber uint32, dstPort, srcPort uint16, dstIP, srcIP net
 		windowSize: DEFAULTWINDOWSIZE,
 		SegRcvChan: make(chan *proto.Segment),
 		// Retransmission
-		rtmQueue:      deque.New[*proto.Segment](),
+		rtmQueue:      make(chan *proto.Segment),
 		seq2timestamp: make(map[uint32]time.Time),
 	}
+	go conn.retransmissionLoop()
 	return conn
 }
 
@@ -174,12 +174,24 @@ func (conn *VTCPConn) VSBufferRcv() {
 }
 
 // ********************************************************************************************
+// Retransmission Queue
+func (conn *VTCPConn) retransmissionLoop() {
+	for {
+		segR := <-conn.rtmQueue
+		if segR.TCPhdr.AckNum <= conn.seqNum {
+			continue
+		}
+		conn.rtmQueue <- segR
+	}
+}
+
+// ********************************************************************************************
 // helper function
 func (conn *VTCPConn) send(content []byte, seqNum uint32) {
 	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck, seqNum), content)
 	conn.NodeSegSendChan <- seg
 	// add the segment to retransmission queue
-	conn.rtmQueue.PushBack(seg)
+	conn.rtmQueue <- seg
 
 	myDebug.Debugln("[VSBufferSend] %v sent segment to %v, SEQ: %v, ACK: %v, Payload: %v\n",
 		conn.LocalAddr.String(), conn.RemoteAddr.String(), seg.TCPhdr.SeqNum, conn.ackNum, string(seg.Payload))
