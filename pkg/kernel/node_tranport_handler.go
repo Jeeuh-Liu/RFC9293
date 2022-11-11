@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
 	"tcpip/pkg/tcp"
 
@@ -17,10 +16,6 @@ func (node *Node) handleTCPSegment() {
 		tuple := segment.FormTuple()
 		// 2nd & 3rd handshake
 		if conn := node.socketTable.FindConn(tuple); conn != nil {
-			myDebug.Debugln("%v:%v receive packet from %v:%v, SEQ: %v, ACK %v",
-				conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
-				conn.RemotePort, segment.TCPhdr.SeqNum, segment.TCPhdr.AckNum)
-
 			conn.SegRcvChan <- segment
 			continue
 		}
@@ -75,6 +70,8 @@ func (node *Node) HandleCreateConn(nodeCLI *proto.NodeCLI) {
 	go conn.SynSend()
 }
 
+// *****************************************************************************************
+// Handle Send Bytes
 func (node *Node) handleSendSegment(nodeCLI *proto.NodeCLI) {
 	socketID := nodeCLI.Val16
 	conn := node.socketTable.FindConnByID(socketID)
@@ -82,7 +79,7 @@ func (node *Node) handleSendSegment(nodeCLI *proto.NodeCLI) {
 		fmt.Printf("no VTCPConn with socket ID %v\n", socketID)
 		return
 	}
-	go conn.SimpleSend(nodeCLI.Bytes)
+	go conn.VSBufferWrite(nodeCLI.Bytes)
 }
 
 // *****************************************************************************************

@@ -2,15 +2,14 @@ package tcp
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 )
 
 type SocketTable struct {
 	mu sync.Mutex
 	//tuple := remoteIP::remotePort::localPort
-	ConnPort          uint16
-	counter           uint16
+	ConnPort          uint16 // which port to assign for a new normal conn
+	counter           uint16 // which id to assign for a new listen conn / normal conn
 	id2Conns          map[uint16]*VTCPConn
 	tuple2NormalConns map[string]*VTCPConn
 	id2Listeners      map[uint16]*VTCPListener
@@ -30,7 +29,7 @@ func NewSocketTable() *SocketTable {
 
 func (table *SocketTable) PrintSockets() {
 	fmt.Printf("%-8v %-16v %-12v %-12v %-12v %-12v\n", "socket", "local-addr", "port", "dst-addr", "port", "status")
-	strings.Repeat("-", 60)
+	fmt.Println("--------------------------------------------------------------")
 	// Print out Listener Conns
 	for i := 0; i < int(table.counter); i++ {
 		if conn, ok := table.id2Listeners[uint16(i)]; ok {

@@ -8,6 +8,7 @@ require (
 )
 
 require (
+	github.com/gammazero/deque v0.2.1 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
 )

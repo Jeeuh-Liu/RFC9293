@@ -37,7 +37,12 @@ const (
 	// the first port we allocate for conn
 	FIRST_PORT = 0
 
-	DEFAULTPACKETMTU = 1400
+	// DEFAULTPACKETMTU = 1400
+	DEFAULTPACKETMTU = 20 + 20 + 2
 	DEFAULTIPHDRLEN  = 20
 	DEFAULTTCPHDRLEN = 20
+
+	// Send Buffer
+	// BUFFER_SIZE = 1 << 16
+	BUFFER_SIZE = uint32(10)
 )
