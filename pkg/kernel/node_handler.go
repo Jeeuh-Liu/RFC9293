@@ -71,6 +71,9 @@ func (node *Node) HandleNodeCLI(nodeCLI *proto.NodeCLI) {
 	case proto.CLI_SENDSEGMENT:
 		node.handleSendSegment(nodeCLI)
 		fmt.Printf("> ")
+	case proto.CLI_RECVSEGMENT:
+		go node.handleRecvSegment(nodeCLI)
+		fmt.Printf("> ")
 	}
 }
 

@@ -94,3 +94,15 @@ func (node *Node) HandleSendOutSegment(seg *proto.Segment) {
 	// proto.PrintHex(iPayload)
 	node.RT.SendTCPPacket(seg.IPhdr.Src.String(), seg.IPhdr.Dst.String(), string(iPayload))
 }
+
+func (node *Node) handleRecvSegment(nodeCLI *proto.NodeCLI) {
+	socketID := nodeCLI.Val16
+	conn := node.socketTable.FindConnByID(socketID)
+	if conn == nil {
+		fmt.Printf("no VTCPConn with socket ID %v\n", socketID)
+		return
+	}
+	isBlock := nodeCLI.Bytes[0] == 'y'
+	numBytes := nodeCLI.Val32
+	conn.Retriv(numBytes, isBlock)
+}

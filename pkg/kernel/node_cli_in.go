@@ -129,6 +129,19 @@ func (node *Node) ScanClI() {
 				content := []byte(ws[2])
 				cli := &proto.NodeCLI{CLIType: proto.CLI_SENDSEGMENT, Val16: uint16(id), Bytes: content}
 				node.NodeCLIChan <- cli
+			} else if len(ws) == 4 && ws[0] == "r" {
+				socketId, err := strconv.Atoi(ws[1])
+				if err != nil {
+					return
+				}
+				numBytes, err := strconv.Atoi(ws[2])
+				if err != nil {
+					return
+				}
+				isBlock := []byte(ws[3])
+				cli := &proto.NodeCLI{CLIType: proto.CLI_RECVSEGMENT, Bytes: isBlock,
+					Val16: uint16(socketId), Val32: uint32(numBytes)}
+				node.NodeCLIChan <- cli
 			} else {
 				fmt.Printf("Invalid command\n> ")
 			}
