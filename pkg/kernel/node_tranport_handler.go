@@ -49,6 +49,7 @@ func (node *Node) NodeAcceptLoop(listener *tcp.VTCPListener) {
 			continue
 		}
 		conn.NodeSegSendChan = node.segSendChan
+		conn.BlockChan = node.NodeCLIChan
 		node.socketTable.OfferConn(conn)
 		// Recv SYN
 		go conn.SynRev()

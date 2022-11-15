@@ -40,6 +40,7 @@ type VTCPConn struct {
 	//Recv
 	NonEmptyCond *sync.Cond
 	RcvBuf       *RecvBuffer
+	BlockChan    chan *proto.NodeCLI
 }
 
 func NewNormalSocket(seqNumber uint32, dstPort, srcPort uint16, dstIP, srcIP net.IP) *VTCPConn {
@@ -281,6 +282,7 @@ func (conn *VTCPConn) estabRev() {
 func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 	res := []byte{}
 	totalRead := uint32(0)
+	conn.BlockChan <- &proto.NodeCLI{CLIType: proto.CLI_BLOCKCLI}
 	for {
 		conn.mu.Lock()
 		if !conn.RcvBuf.IsHeadAcked() {
@@ -300,6 +302,7 @@ func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 			break
 		}
 	}
+	conn.BlockChan <- &proto.NodeCLI{CLIType: proto.CLI_UNBLOCKCLI}
 	fmt.Printf("now head point to %v\n", conn.RcvBuf.head)
 }
 

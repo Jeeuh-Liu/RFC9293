@@ -24,6 +24,9 @@ func (node *Node) ScanClI() {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
 			line := scanner.Text()
+			if node.blockCLI {
+				continue
+			}
 			ws := strings.Split(line, " ")
 			// fmt.Println(ws, len(ws), ws[0])
 			if (len(ws) == 1 || len(ws) == 2) && ws[0] == "li" {

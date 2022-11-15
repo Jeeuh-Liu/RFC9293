@@ -74,6 +74,11 @@ func (node *Node) HandleNodeCLI(nodeCLI *proto.NodeCLI) {
 	case proto.CLI_RECVSEGMENT:
 		go node.handleRecvSegment(nodeCLI)
 		fmt.Printf("> ")
+	case proto.CLI_BLOCKCLI:
+		node.blockCLI = true
+	case proto.CLI_UNBLOCKCLI:
+		node.blockCLI = false
+		fmt.Printf("> ")
 	}
 }
 

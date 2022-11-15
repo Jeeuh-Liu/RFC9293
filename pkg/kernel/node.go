@@ -19,6 +19,7 @@ type Node struct {
 	socketTable *tcp.SocketTable
 	segRecvChan chan *proto.Segment //seg received from the network/router(PROTO:6)
 	segSendChan chan *proto.Segment //seg to be sent from normal socket
+	blockCLI    bool
 }
 
 func (node *Node) Make(args []string) {

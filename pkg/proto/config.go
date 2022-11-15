@@ -16,6 +16,8 @@ const (
 	CLI_CREATECONN     = uint8(10)
 	CLI_SENDSEGMENT    = uint8(11)
 	CLI_RECVSEGMENT    = uint8(12)
+	CLI_BLOCKCLI       = uint8(13)
+	CLI_UNBLOCKCLI     = uint8(14)
 	// network pass Packet to link
 	MESSAGE_BCRIPREQ  = uint8(20)
 	MESSAGE_BCRIPRESP = uint8(21)
