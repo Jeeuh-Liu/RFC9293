@@ -1,7 +1,6 @@
 package tcp
 
 import (
-	"fmt"
 	"tcpip/pkg/proto"
 )
 
@@ -54,7 +53,6 @@ func (sb *SendBuffer) WriteIntoBuffer(content []byte) uint32 {
 		// <2> write remaining part of content into left of buffer
 		copy(sb.buffer, content2)
 	}
-	fmt.Println(sb.buffer)
 	// 3. update total
 	sb.lbw += bnum
 	sb.total += bnum

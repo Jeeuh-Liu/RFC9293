@@ -42,7 +42,7 @@ func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 		pos++
 	}
 	newWindow := DEFAULTWINDOWSIZE - (pos - buf.head)
-	myDebug.Debugln("old win: %v, new win: %v, pos: %v, head: %v", buf.window, newWindow, pos, buf.head)
+	// myDebug.Debugln("old win: %v, new win: %v, pos: %v, head: %v", buf.window, newWindow, pos, buf.head)
 	if newWindow < buf.window {
 		buf.window = newWindow
 	}
@@ -77,19 +77,19 @@ func (buf *RecvBuffer) IsHeadAcked() bool {
 	return buf.una != buf.head
 }
 
-func (buf *RecvBuffer) DisplayBuf() []string {
-	res := []string{}
+func (buf *RecvBuffer) DisplayBuf() string {
+	res := []byte{}
 	pos := buf.head
 	for cnt := 0; cnt < DEFAULTWINDOWSIZE; cnt++ {
 		val, acked := buf.buffer[calcIndex(pos)]
 		if acked {
-			res = append(res, string(val))
+			res = append(res, val)
 		} else {
-			res = append(res, "not-acked")
+			res = append(res, byte('*'))
 		}
 		pos++
 	}
-	return res
+	return string(res)
 }
 
 func (buf *RecvBuffer) GetSegStatus(seg *proto.Segment) uint8 {
