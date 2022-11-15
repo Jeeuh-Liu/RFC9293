@@ -93,6 +93,9 @@ func (sb *SendBuffer) UpdateNxt(mtu int) ([]byte, uint32) {
 	return payload, seqNum
 }
 
+// 12345 a bcde//
+// isZeroProbeSend = false
+// send zeroProbe => isZeroProbesent = true
 // *********************************************************************************************
 // Receive out one ACK
 func (sb *SendBuffer) UpdateUNA(ack *proto.Segment) {
@@ -116,4 +119,8 @@ func (sb *SendBuffer) getRemainingBytesBack() uint32 {
 
 func (sb *SendBuffer) getIdx(seqNum uint32) uint32 {
 	return (seqNum - sb.isn) % proto.BUFFER_SIZE
+}
+
+func (sb *SendBuffer) UpdateWin(tcpHeaderWin uint16) {
+	sb.win = uint32(tcpHeaderWin)
 }
