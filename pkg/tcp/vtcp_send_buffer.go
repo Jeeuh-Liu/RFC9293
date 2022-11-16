@@ -61,6 +61,8 @@ func (sb *SendBuffer) WriteIntoBuffer(content []byte) uint32 {
 
 // *********************************************************************************************
 // Send out one segment
+
+// Check if there are bytes left in the buffer to send
 func (sb *SendBuffer) CanSend() bool {
 	return sb.nxt < sb.lbw
 }
@@ -68,7 +70,7 @@ func (sb *SendBuffer) CanSend() bool {
 func (sb *SendBuffer) GetSegmentToSendAndUpdateNxt(mtu int) ([]byte, uint32) {
 	var len uint32
 	seqNum := sb.nxt
-	if sb.win > 0 && sb.win < uint32(mtu) {
+	if sb.win < uint32(mtu) {
 		mtu = int(sb.win)
 	}
 

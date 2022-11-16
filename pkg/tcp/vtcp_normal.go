@@ -72,12 +72,12 @@ func NewNormalSocket(seqNumber uint32, dstPort, srcPort uint16, dstIP, srcIP net
 func (conn *VTCPConn) SynSend() {
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
-	// Send Syn
+	// [HandShake1] Send Syn
 	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagSyn, conn.seqNum), []byte{})
 	conn.NodeSegSendChan <- seg
 	conn.rtmQueue <- seg
 	myDebug.Debugln("[Handshake 1] sent to %v, SEQ: %v", conn.RemoteAddr.String(), conn.seqNum)
-	// Rev Syn+ACK
+	// [Handshake2] Rev Syn+ACK
 	for {
 		conn.mu.Unlock()
 		segRev := <-conn.SegRcvChan
@@ -89,7 +89,7 @@ func (conn *VTCPConn) SynSend() {
 		if conn.seqNum+1 == segRev.TCPhdr.AckNum {
 			conn.seqNum = segRev.TCPhdr.AckNum
 			conn.ackNum = segRev.TCPhdr.SeqNum + 1
-			// Send Ack
+			// [Handshake3] Send Ack
 			seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck, conn.seqNum), []byte{})
 			conn.NodeSegSendChan <- seg
 			conn.state = proto.ESTABLISH
@@ -106,6 +106,7 @@ func (conn *VTCPConn) SynSend() {
 // ********************************************************************************************
 // Server
 func (conn *VTCPConn) SynRev() {
+	// [Handshake2] Send Syn|ACK
 	conn.mu.Lock()
 	conn.seqNum -= 1000000000
 	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagSyn|header.TCPFlagAck, conn.seqNum), []byte{})
@@ -114,6 +115,7 @@ func (conn *VTCPConn) SynRev() {
 	conn.seqNum++
 	conn.mu.Unlock()
 
+	// [Handshake3] Rev ACK
 	for {
 		segRev := <-conn.SegRcvChan
 		if conn.seqNum == segRev.TCPhdr.AckNum {
