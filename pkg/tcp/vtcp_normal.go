@@ -41,6 +41,8 @@ type VTCPConn struct {
 	NonEmptyCond *sync.Cond
 	RcvBuf       *RecvBuffer
 	BlockChan    chan *proto.NodeCLI
+	// ZeroProbe
+	zeroProbe bool
 }
 
 func NewNormalSocket(seqNumber uint32, dstPort, srcPort uint16, dstIP, srcIP net.IP) *VTCPConn {
@@ -58,6 +60,7 @@ func NewNormalSocket(seqNumber uint32, dstPort, srcPort uint16, dstIP, srcIP net
 		// Retransmission
 		rtmQueue:      make(chan *proto.Segment),
 		seq2timestamp: make(map[uint32]time.Time),
+		zeroProbe:     false,
 	}
 	conn.NonEmptyCond = sync.NewCond(&conn.mu)
 	go conn.retransmissionLoop()
@@ -139,16 +142,16 @@ func (conn *VTCPConn) VSBufferSend() {
 	defer conn.mu.Unlock()
 	mtu := proto.DEFAULTPACKETMTU - proto.DEFAULTIPHDRLEN - proto.DEFAULTTCPHDRLEN
 	for conn.state == proto.ESTABLISH {
-		if conn.sb.CanSend() {
+		if conn.sb.CanSend() && !conn.zeroProbe {
 			if conn.sb.win == 0 {
 				//buffer
-				//
 				// Zero probe
-				payload, seqNum := conn.sb.UpdateNxt(1)
+				payload, seqNum := conn.sb.GetZeroProbe()
 				conn.send(payload, seqNum)
+				conn.zeroProbe = true
 			} else {
 				// Get one segment, send it out and add it to retransmission queue
-				payload, seqNum := conn.sb.UpdateNxt(mtu)
+				payload, seqNum := conn.sb.GetSegmentToSendAndUpdateNxt(mtu)
 				conn.send(payload, seqNum)
 			}
 		} else {
@@ -176,8 +179,12 @@ func (conn *VTCPConn) VSBufferRcv() {
 		myDebug.Debugln("[Client] %v:%v receive from %v:%v, SEQ: %v, ACK %v, WIN: %v",
 			conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
 			conn.RemotePort, ack.TCPhdr.SeqNum, ack.TCPhdr.AckNum, ack.TCPhdr.WindowSize)
+		myDebug.Debugln("Current Send Buffer Content: %v", conn.sb.buffer)
 		conn.sb.UpdateUNA(ack)
 		conn.sb.UpdateWin(ack.TCPhdr.WindowSize)
+		if ack.TCPhdr.WindowSize > 0 {
+			conn.zeroProbe = false
+		}
 		conn.seqNum = ack.TCPhdr.AckNum
 		// myDebug.Debugln("[SendBuffer_RevACK] %v send buffer remaing bytes %v", conn.LocalAddr.String(), conn.sb.GetRemainBytes())
 		conn.mu.Unlock()

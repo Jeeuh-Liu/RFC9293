@@ -65,9 +65,13 @@ func (sb *SendBuffer) CanSend() bool {
 	return sb.nxt < sb.lbw
 }
 
-func (sb *SendBuffer) UpdateNxt(mtu int) ([]byte, uint32) {
+func (sb *SendBuffer) GetSegmentToSendAndUpdateNxt(mtu int) ([]byte, uint32) {
 	var len uint32
 	seqNum := sb.nxt
+	if sb.win > 0 && sb.win < uint32(mtu) {
+		mtu = int(sb.win)
+	}
+
 	if sb.nxt+uint32(mtu) > sb.lbw {
 		len = sb.lbw - sb.nxt
 		// payload = sb.buffer[sb.getIdx(sb.nxt):sb.getIdx(sb.lbw)]
@@ -82,12 +86,24 @@ func (sb *SendBuffer) UpdateNxt(mtu int) ([]byte, uint32) {
 		copy(payload, sb.buffer[sb.getIdx(sb.nxt):sb.getIdx(sb.nxt+len)])
 	} else {
 		// copy right and left
-		copy(payload, sb.buffer[sb.getIdx(sb.nxt):])
-		len2 := len - (proto.BUFFER_SIZE - sb.getIdx(sb.nxt))
-		copy(payload, sb.buffer[:len2])
+		len1 := proto.BUFFER_SIZE - sb.getIdx(sb.nxt)
+		len2 := len - len1
+		copy(payload, sb.buffer[sb.getIdx(sb.nxt):proto.BUFFER_SIZE])
+		copy(payload[len1:], sb.buffer[:len2])
 	}
 	// Update metadata of send buffer
-	sb.nxt += len
+	if sb.win != 0 {
+		sb.nxt += len
+	}
+	return payload, seqNum
+}
+
+func (sb *SendBuffer) GetZeroProbe() ([]byte, uint32) {
+	seqNum := sb.nxt
+	len := uint32(1)
+	payload := make([]byte, len)
+	copy(payload, sb.buffer[sb.getIdx(sb.nxt):sb.getIdx(sb.nxt+len)])
+	sb.nxt += 1
 	return payload, seqNum
 }
 
