@@ -147,7 +147,7 @@ func (conn *VTCPConn) VSBufferWrite(content []byte) {
 		// fmt.Printf("Hello1, isFull: %v\n", conn.sb.IsFull())
 		if !conn.sb.IsFull() {
 			bnum := conn.sb.WriteIntoBuffer(content)
-			myDebug.Debugln("[Client] %v:%v writes %v bytes into send buffer, CurrSendBuffer:%v", conn.LocalAddr.String(), conn.LocalPort, bnum, conn.sb.buffer)
+			myDebug.Debugln("[Client] %v:%v writes %v bytes into send buffer, CurrSendBuffer:%v", conn.LocalAddr.String(), conn.LocalPort, bnum, string(conn.sb.buffer))
 			total -= bnum
 			content = content[bnum:]
 			conn.scv.Signal()
@@ -196,13 +196,14 @@ func (conn *VTCPConn) VSBufferRcv() {
 		myDebug.Debugln("[Client] %v:%v receive from %v:%v, SEQ: %v, ACK %v, WIN: %v",
 			conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
 			conn.RemotePort, ack.TCPhdr.SeqNum, ack.TCPhdr.AckNum, ack.TCPhdr.WindowSize)
-		myDebug.Debugln("Current Send Buffer Content: %v", conn.sb.buffer)
+		myDebug.Debugln("Current Send Buffer Content: %v", string(conn.sb.buffer))
 		conn.sb.UpdateUNA(ack)
+		conn.wcv.Signal()
 		conn.sb.UpdateWin(ack.TCPhdr.WindowSize)
 		if ack.TCPhdr.WindowSize > 0 {
 			conn.zeroProbe = false
+			conn.scv.Signal()
 		}
-		conn.wcv.Signal()
 		conn.seqNum = ack.TCPhdr.AckNum
 		// myDebug.Debugln("[SendBuffer_RevACK] %v send buffer remaing bytes %v", conn.LocalAddr.String(), conn.sb.GetRemainBytes())
 		conn.mu.Unlock()

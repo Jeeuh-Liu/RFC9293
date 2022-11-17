@@ -1,6 +1,7 @@
 package tcp
 
 import (
+	"fmt"
 	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
 )
@@ -32,7 +33,7 @@ func NewRecvBuffer(seq uint32, sz uint32) *RecvBuffer {
 
 func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 	pos := seg.TCPhdr.SeqNum
-	_, acked := buf.buffer[pos]
+	_, acked := buf.buffer[calcIndex(pos)]
 	if acked {
 		return buf.una, uint16(buf.window)
 	}
@@ -47,16 +48,18 @@ func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 		buf.window = newWindow
 	}
 	//-------|-----|--------xxxxxx
-	oldPos := pos
+	oldPos := seg.TCPhdr.SeqNum
+	fmt.Println("old una", buf.una)
 	if buf.una == seg.TCPhdr.SeqNum {
-		_, found := buf.buffer[pos]
-		// at most ack windowsize bytes
-		for found && pos < oldPos+DEFAULTWINDOWSIZE {
+		_, found := buf.buffer[calcIndex(pos)]
+		// at most ack windowsize bytes and cannot move back to buf.head
+		for found && pos < oldPos+DEFAULTWINDOWSIZE && calcIndex(pos) != calcIndex(buf.head) {
 			pos++
-			_, found = buf.buffer[pos]
+			_, found = buf.buffer[calcIndex(pos)]
 		}
 		buf.una = pos
 	}
+	fmt.Println("new una", buf.una)
 	return buf.una, uint16(buf.window)
 }
 

@@ -115,11 +115,15 @@ func (sb *SendBuffer) GetZeroProbe() ([]byte, uint32) {
 // *********************************************************************************************
 // Receive out one ACK
 func (sb *SendBuffer) UpdateUNA(ack *proto.Segment) {
-	ackNum := ack.TCPhdr.AckNum
 	if ack.TCPhdr.AckNum > sb.una {
 		// length of payload is (ackNum - sb.una)
-		sb.total -= (ackNum - sb.una)
-		sb.una = ackNum
+		acked := 0
+		for curSeqNum := sb.una; curSeqNum < ack.TCPhdr.AckNum; curSeqNum++ {
+			sb.buffer[sb.getIdx(curSeqNum)] = byte('*')
+			acked += 1
+		}
+		sb.total -= uint32(acked)
+		sb.una += uint32(acked)
 	}
 }
 
