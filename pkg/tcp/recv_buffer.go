@@ -33,23 +33,35 @@ func NewRecvBuffer(seq uint32, sz uint32) *RecvBuffer {
 
 func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 	pos := seg.TCPhdr.SeqNum
-	_, acked := buf.buffer[calcIndex(pos)]
+	// bug fix: first byte acked doesn't mean all bytes in payload have been acked
+	// we must add it to map as many as possible (length of payload can get out of range)
+	// _, acked := buf.buffer[calcIndex(pos)]
 	// pos cannot write into a position too far away
-	if acked {
-		return buf.una, uint16(buf.window)
-	}
+	// if acked {
+	// 	return buf.una, uint16(buf.window)
+	// }
 	//ack,b
+	acked := uint32(0)
 	for _, b := range seg.Payload {
-		buf.buffer[calcIndex(pos)] = b
-		pos++
+		// ignore the acked
+		if pos < buf.head {
+			acked += 1
+			pos++
+		} else if pos >= buf.head+DEFAULTWINDOWSIZE {
+			// break if too far away
+			break
+		} else {
+			buf.buffer[calcIndex(pos)] = b
+			pos++
+		}
 	}
+	start := seg.TCPhdr.SeqNum + uint32(acked)
+	fmt.Println("start is:", start)
 	//-------|-----|--------xxxxxx
-	oldPos := seg.TCPhdr.SeqNum
-	fmt.Println("old una", buf.una)
-	if buf.una == seg.TCPhdr.SeqNum {
+	if buf.una == start {
 		_, found := buf.buffer[calcIndex(pos)]
 		// at most ack windowsize bytes and cannot move back to buf.head
-		for found && pos < oldPos+DEFAULTWINDOWSIZE && calcIndex(pos) != calcIndex(buf.head) {
+		for found && pos < buf.head+DEFAULTWINDOWSIZE {
 			pos++
 			_, found = buf.buffer[calcIndex(pos)]
 		}
@@ -60,7 +72,6 @@ func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 	if newWindow < buf.window {
 		buf.window = newWindow
 	}
-	fmt.Println("new una", buf.una)
 	return buf.una, uint16(buf.window)
 }
 
@@ -101,8 +112,9 @@ func (buf *RecvBuffer) DisplayBuf() string {
 func (buf *RecvBuffer) GetSegStatus(seg *proto.Segment) uint8 {
 	seq := seg.TCPhdr.SeqNum
 	// bug_fix: seq > buf.head+uint32(DEFAULTWINDOWSIZE)
-	if seq < buf.head || seq >= buf.head+uint32(DEFAULTWINDOWSIZE) {
-		myDebug.Debugln("%v, %v", seq, buf.head)
+	// bug_fix if seq < buf.head => unacked
+	if seq >= buf.head+uint32(DEFAULTWINDOWSIZE) {
+		myDebug.Debugln("Out of range : %v, %v", seq, buf.head)
 		return OUTSIDEWINDOW
 	}
 	if seq == buf.una {

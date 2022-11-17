@@ -272,6 +272,7 @@ func (conn *VTCPConn) estabRev() {
 			continue
 		}
 		status := conn.RcvBuf.GetSegStatus(segRev)
+		fmt.Println("status:", status)
 		if status == OUTSIDEWINDOW {
 			// bug_fix: unlock when call continue
 			conn.mu.Unlock()
@@ -284,23 +285,29 @@ func (conn *VTCPConn) estabRev() {
 		myDebug.Debugln("[Server] %v:%v receive from %v:%v, SEQ: %v, ACK %v, Payload %v",
 			conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
 			conn.RemotePort, segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum, string(segRev.Payload))
-		headAcked := conn.RcvBuf.IsHeadAcked()
-		if status == EARLYARRIVAL || status == NEXTUNACKSEG {
-			// bug_fix: change early arr
-			ackNum, windowSize := conn.RcvBuf.WriteSeg2Buf(segRev)
-			if status == NEXTUNACKSEG {
-				conn.ackNum = ackNum
-				conn.windowSize = windowSize
-			}
-		}
+		// headAcked := conn.RcvBuf.IsHeadAcked()
+		// bug_fix: already acked can also write some bytes
+		// if status == EARLYARRIVAL || status == NEXTUNACKSEG || status == ALREADYACKED {
+		// 	// bug_fix: change early arr
+		// 	ackNum, windowSize := conn.RcvBuf.WriteSeg2Buf(segRev)
+		// 	if status == NEXTUNACKSEG {
+		// 		conn.ackNum = ackNum
+		// 		conn.windowSize = windowSize
+		// 	}
+		// }
+		ackNum, windowSize := conn.RcvBuf.WriteSeg2Buf(segRev)
+
 		seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck, conn.seqNum), []byte{})
 		myDebug.Debugln("[Server] Current recv buffer content: %v", conn.RcvBuf.DisplayBuf())
 		myDebug.Debugln("[Server] %v:%v sent to %v:%v, SEQ: %v, ACK: %v, Win: %v",
 			conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
 			conn.RemotePort, conn.seqNum, conn.ackNum, conn.windowSize)
 		conn.NodeSegSendChan <- seg
+		headAcked := conn.RcvBuf.IsHeadAcked()
 		conn.mu.Unlock()
-		if !headAcked && status == NEXTUNACKSEG {
+		if headAcked {
+			conn.ackNum = ackNum
+			conn.windowSize = windowSize
 			conn.NonEmptyCond.Broadcast()
 		}
 	}
