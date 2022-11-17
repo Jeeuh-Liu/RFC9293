@@ -47,9 +47,11 @@ func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 		buf.window = newWindow
 	}
 	//-------|-----|--------xxxxxx
+	oldPos := pos
 	if buf.una == seg.TCPhdr.SeqNum {
 		_, found := buf.buffer[pos]
-		for found {
+		// at most ack windowsize bytes
+		for found && pos < oldPos+DEFAULTWINDOWSIZE {
 			pos++
 			_, found = buf.buffer[pos]
 		}
