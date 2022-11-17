@@ -94,12 +94,15 @@ func (conn *VTCPConn) SynSend() {
 			seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck, conn.seqNum), []byte{})
 			conn.NodeSegSendChan <- seg
 			conn.state = proto.ESTABLISH
-			// Create send buffer
+			// [Client] Create send buffer
 			conn.sb = NewSendBuffer(conn.seqNum, uint32(segRev.TCPhdr.WindowSize))
 			conn.scv = *sync.NewCond(&conn.mu)
 			conn.wcv = *sync.NewCond(&conn.mu)
 			go conn.VSBufferSend()
 			// go conn.VSBufferRcv()
+			// [Double: Client] Create rcv buffer
+			conn.RcvBuf = NewRecvBuffer(conn.ackNum, DEFAULTWINDOWSIZE)
+			// [Client] Rev Segments
 			go conn.estabRevAndSend()
 			return
 		}
@@ -127,12 +130,18 @@ func (conn *VTCPConn) SynRev() {
 				conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
 				conn.RemotePort, segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum)
 			conn.seqNum = segRev.TCPhdr.AckNum
-			conn.ackNum = segRev.TCPhdr.SeqNum + 1
+			conn.ackNum = segRev.TCPhdr.SeqNum
 			conn.state = proto.ESTABLISH
-			// Create rcv buffer
-			conn.RcvBuf = NewRecvBuffer(segRev.TCPhdr.SeqNum, DEFAULTWINDOWSIZE)
+			// [Server] Create rcv buffer
+			conn.RcvBuf = NewRecvBuffer(conn.ackNum, DEFAULTWINDOWSIZE)
 			// go conn.estabRev()
+			// [Server] Rev Segments
 			go conn.estabRevAndSend()
+			// [Double: Server] Create send buffer
+			conn.sb = NewSendBuffer(conn.seqNum, uint32(segRev.TCPhdr.WindowSize))
+			conn.scv = *sync.NewCond(&conn.mu)
+			conn.wcv = *sync.NewCond(&conn.mu)
+			go conn.VSBufferSend()
 			return
 		}
 	}
@@ -347,7 +356,7 @@ func (conn *VTCPConn) HandleRcvSegInRcvBuffer(segRev *proto.Segment) {
 func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 	res := []byte{}
 	totalRead := uint32(0)
-	conn.BlockChan <- &proto.NodeCLI{CLIType: proto.CLI_BLOCKCLI}
+	// conn.BlockChan <- &proto.NodeCLI{CLIType: proto.CLI_BLOCKCLI}
 	for {
 		conn.mu.Lock()
 		if !conn.RcvBuf.IsHeadAcked() {
@@ -356,7 +365,6 @@ func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 		output, numRead := conn.RcvBuf.ReadBuf(numBytes)
 		conn.windowSize += numRead
 		conn.RcvBuf.SetWindowSize(uint32(conn.windowSize))
-
 		res = append(res, output...)
 		totalRead += uint32(numRead)
 		myDebug.Debugln("[Server] To READ %v bytes, return %v bytes, content %v, buffer %v, currWindowSize %v",
@@ -372,7 +380,7 @@ func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 			break
 		}
 	}
-	conn.BlockChan <- &proto.NodeCLI{CLIType: proto.CLI_UNBLOCKCLI}
+	// conn.BlockChan <- &proto.NodeCLI{CLIType: proto.CLI_UNBLOCKCLI}
 	fmt.Printf("now head point to %v\n", conn.RcvBuf.head)
 }
 
