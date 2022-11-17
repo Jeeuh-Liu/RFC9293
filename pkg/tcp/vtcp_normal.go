@@ -280,7 +280,12 @@ func (conn *VTCPConn) estabRev() {
 			conn.RemotePort, segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum, string(segRev.Payload))
 		headAcked := conn.RcvBuf.IsHeadAcked()
 		if status == EARLYARRIVAL || status == NEXTUNACKSEG {
-			conn.ackNum, conn.windowSize = conn.RcvBuf.WriteSeg2Buf(segRev)
+			// bug_fix: change early arr
+			ackNum, windowSize := conn.RcvBuf.WriteSeg2Buf(segRev)
+			if status == NEXTUNACKSEG {
+				conn.ackNum = ackNum
+				conn.windowSize = windowSize
+			}
 		}
 		seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck, conn.seqNum), []byte{})
 		myDebug.Debugln("[Server] Current recv buffer content: %v", conn.RcvBuf.DisplayBuf())

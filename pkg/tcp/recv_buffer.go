@@ -34,6 +34,7 @@ func NewRecvBuffer(seq uint32, sz uint32) *RecvBuffer {
 func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 	pos := seg.TCPhdr.SeqNum
 	_, acked := buf.buffer[calcIndex(pos)]
+	// pos cannot write into a position too far away
 	if acked {
 		return buf.una, uint16(buf.window)
 	}
@@ -99,7 +100,8 @@ func (buf *RecvBuffer) DisplayBuf() string {
 
 func (buf *RecvBuffer) GetSegStatus(seg *proto.Segment) uint8 {
 	seq := seg.TCPhdr.SeqNum
-	if seq < buf.head || seq > buf.head+uint32(DEFAULTWINDOWSIZE) {
+	// bug_fix: seq > buf.head+uint32(DEFAULTWINDOWSIZE)
+	if seq < buf.head || seq >= buf.head+uint32(DEFAULTWINDOWSIZE) {
 		myDebug.Debugln("%v, %v", seq, buf.head)
 		return OUTSIDEWINDOW
 	}
