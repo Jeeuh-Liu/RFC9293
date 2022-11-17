@@ -272,7 +272,7 @@ func (conn *VTCPConn) estabRev() {
 			continue
 		}
 		status := conn.RcvBuf.GetSegStatus(segRev)
-		fmt.Println("status:", status)
+		// fmt.Println("status:", status)
 		if status == OUTSIDEWINDOW {
 			// bug_fix: unlock when call continue
 			conn.mu.Unlock()
@@ -331,6 +331,11 @@ func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 		myDebug.Debugln("[Server] To READ %v bytes, return %v bytes, content %v, buffer %v, currWindowSize %v",
 			numBytes, totalRead, string(res), conn.RcvBuf.DisplayBuf(), conn.windowSize)
 
+		if string(res) == proto.TestString {
+			println("************************************************")
+			fmt.Println("Woww!!!!!!!!")
+			println("************************************************")
+		}
 		conn.mu.Unlock()
 		if !isBlock || totalRead == numBytes {
 			break
