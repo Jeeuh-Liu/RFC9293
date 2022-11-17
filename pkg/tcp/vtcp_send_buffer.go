@@ -1,6 +1,7 @@
 package tcp
 
 import (
+	"fmt"
 	"tcpip/pkg/proto"
 )
 
@@ -114,17 +115,19 @@ func (sb *SendBuffer) GetZeroProbe() ([]byte, uint32) {
 // send zeroProbe => isZeroProbesent = true
 // *********************************************************************************************
 // Receive out one ACK
-func (sb *SendBuffer) UpdateUNA(ack *proto.Segment) {
+func (sb *SendBuffer) UpdateUNA(ack *proto.Segment) uint32 {
+	acked := uint32(0)
 	if ack.TCPhdr.AckNum > sb.una {
+		fmt.Println(ack.TCPhdr.AckNum)
 		// length of payload is (ackNum - sb.una)
-		acked := 0
 		for curSeqNum := sb.una; curSeqNum < ack.TCPhdr.AckNum; curSeqNum++ {
 			sb.buffer[sb.getIdx(curSeqNum)] = byte('*')
 			acked += 1
 		}
-		sb.total -= uint32(acked)
-		sb.una += uint32(acked)
+		sb.total -= acked
+		sb.una += acked
 	}
+	return acked
 }
 
 // *********************************************************************************************

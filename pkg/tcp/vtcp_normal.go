@@ -196,7 +196,7 @@ func (conn *VTCPConn) VSBufferRcv() {
 		myDebug.Debugln("[Client] %v:%v receive from %v:%v, SEQ: %v, ACK %v, WIN: %v",
 			conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
 			conn.RemotePort, ack.TCPhdr.SeqNum, ack.TCPhdr.AckNum, ack.TCPhdr.WindowSize)
-		conn.sb.UpdateUNA(ack)
+		acked := conn.sb.UpdateUNA(ack)
 		myDebug.Debugln("[Client] After ACK, Send Buffer Content: %v", string(conn.sb.buffer))
 		conn.wcv.Signal()
 		conn.sb.UpdateWin(ack.TCPhdr.WindowSize)
@@ -204,7 +204,7 @@ func (conn *VTCPConn) VSBufferRcv() {
 			conn.zeroProbe = false
 			conn.scv.Signal()
 		}
-		conn.seqNum = ack.TCPhdr.AckNum
+		conn.seqNum += acked
 		// myDebug.Debugln("[SendBuffer_RevACK] %v send buffer remaing bytes %v", conn.LocalAddr.String(), conn.sb.GetRemainBytes())
 		conn.mu.Unlock()
 	}
@@ -258,21 +258,27 @@ func (conn *VTCPConn) retransmit(segR *proto.Segment) {
 func (conn *VTCPConn) estabRev() {
 	for {
 		segRev := <-conn.SegRcvChan
+		// fmt.Println("Hello1")
 		conn.mu.Lock()
 		if conn.windowSize == 0 {
 			// myDebug.Debugln("[Server] %v:%v receive zero probe from %v:%v, SEQ: %v, ACK %v",
 			// 	conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
 			// 	conn.RemotePort, segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum)
 			seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck, conn.seqNum), []byte{})
+			// fmt.Println("Hello2")
 			conn.NodeSegSendChan <- seg
+			// fmt.Println("Hello3")
 			conn.mu.Unlock()
 			continue
 		}
 		status := conn.RcvBuf.GetSegStatus(segRev)
 		if status == OUTSIDEWINDOW {
+			// bug_fix: unlock when call continue
+			conn.mu.Unlock()
 			continue
 		}
 		if status == UNDEFINED {
+			conn.mu.Unlock()
 			continue
 		}
 		myDebug.Debugln("[Server] %v:%v receive from %v:%v, SEQ: %v, ACK %v, Payload %v",
