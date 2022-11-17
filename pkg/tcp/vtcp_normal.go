@@ -98,6 +98,7 @@ func (conn *VTCPConn) SynSend() {
 			conn.sb = NewSendBuffer(conn.seqNum, uint32(segRev.TCPhdr.WindowSize))
 			conn.scv = *sync.NewCond(&conn.mu)
 			conn.wcv = *sync.NewCond(&conn.mu)
+			go conn.VSBufferSend()
 			go conn.VSBufferRcv()
 			return
 		}
@@ -140,15 +141,17 @@ func (conn *VTCPConn) SynRev() {
 func (conn *VTCPConn) VSBufferWrite(content []byte) {
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
-	cur := uint32(0)
+	// fmt.Println("Hello")
 	total := uint32(len(content))
-	for cur < total {
+	for total > 0 {
+		// fmt.Printf("Hello1, isFull: %v\n", conn.sb.IsFull())
 		if !conn.sb.IsFull() {
 			bnum := conn.sb.WriteIntoBuffer(content)
 			myDebug.Debugln("[Client] %v:%v writes %v bytes into send buffer, CurrSendBuffer:%v", conn.LocalAddr.String(), conn.LocalPort, bnum, conn.sb.buffer)
-			cur += bnum
-			content = content[cur:]
+			total -= bnum
+			content = content[bnum:]
 			conn.scv.Signal()
+			// fmt.Println("Hello2")
 		} else {
 			conn.wcv.Wait()
 		}
@@ -186,7 +189,6 @@ func (conn *VTCPConn) VSBufferRcv() {
 			seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck, conn.seqNum), []byte{})
 			conn.NodeSegSendChan <- seg
 			fmt.Printf("[HandShake3] Handshake Msg -> Send back another ACK %v\n", seg.TCPhdr.AckNum)
-
 			continue
 		}
 
@@ -307,8 +309,8 @@ func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 
 		res = append(res, output...)
 		totalRead += uint32(numRead)
-		myDebug.Debugln("to read %v bytes, return %v bytes, content %v, buffer %v, currWindowSize %v",
-			numBytes, totalRead, res, conn.RcvBuf.DisplayBuf(), conn.windowSize)
+		myDebug.Debugln("[Server] To READ %v bytes, return %v bytes, content %v, buffer %v, currWindowSize %v",
+			numBytes, totalRead, string(res), conn.RcvBuf.DisplayBuf(), conn.windowSize)
 
 		conn.mu.Unlock()
 		if !isBlock || totalRead == numBytes {

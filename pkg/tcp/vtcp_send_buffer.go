@@ -95,6 +95,7 @@ func (sb *SendBuffer) GetSegmentToSendAndUpdateNxt(mtu int) ([]byte, uint32) {
 	// Update metadata of send buffer
 	if sb.win != 0 {
 		sb.nxt += len
+		sb.win -= len
 	}
 	return payload, seqNum
 }
@@ -142,5 +143,5 @@ func (sb *SendBuffer) UpdateWin(tcpHeaderWin uint16) {
 
 // Check if current send buffer is full
 func (sb *SendBuffer) IsFull() bool {
-	return sb.total < proto.BUFFER_SIZE
+	return sb.total == proto.BUFFER_SIZE
 }
