@@ -61,7 +61,6 @@ func (sb *SendBuffer) WriteIntoBuffer(content []byte) uint32 {
 
 // *********************************************************************************************
 // Send out one segment
-
 // Check if there are bytes left in the buffer to send
 func (sb *SendBuffer) CanSend() bool {
 	return sb.nxt < sb.lbw
@@ -139,4 +138,9 @@ func (sb *SendBuffer) getIdx(seqNum uint32) uint32 {
 
 func (sb *SendBuffer) UpdateWin(tcpHeaderWin uint16) {
 	sb.win = uint32(tcpHeaderWin)
+}
+
+// Check if current send buffer is full
+func (sb *SendBuffer) IsFull() bool {
+	return sb.total < proto.BUFFER_SIZE
 }
