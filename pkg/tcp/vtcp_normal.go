@@ -196,8 +196,8 @@ func (conn *VTCPConn) VSBufferRcv() {
 		myDebug.Debugln("[Client] %v:%v receive from %v:%v, SEQ: %v, ACK %v, WIN: %v",
 			conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
 			conn.RemotePort, ack.TCPhdr.SeqNum, ack.TCPhdr.AckNum, ack.TCPhdr.WindowSize)
-		myDebug.Debugln("Current Send Buffer Content: %v", string(conn.sb.buffer))
 		conn.sb.UpdateUNA(ack)
+		myDebug.Debugln("[Client] After ACK, Send Buffer Content: %v", string(conn.sb.buffer))
 		conn.wcv.Signal()
 		conn.sb.UpdateWin(ack.TCPhdr.WindowSize)
 		if ack.TCPhdr.WindowSize > 0 {

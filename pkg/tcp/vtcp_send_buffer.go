@@ -104,7 +104,7 @@ func (sb *SendBuffer) GetZeroProbe() ([]byte, uint32) {
 	seqNum := sb.nxt
 	len := uint32(1)
 	payload := make([]byte, len)
-	copy(payload, sb.buffer[sb.getIdx(sb.nxt):sb.getIdx(sb.nxt+len)])
+	copy(payload, sb.buffer[sb.getIdx(sb.nxt):sb.getIdx(sb.nxt)+len])
 	sb.nxt += 1
 	return payload, seqNum
 }

@@ -42,11 +42,6 @@ func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 		buf.buffer[calcIndex(pos)] = b
 		pos++
 	}
-	newWindow := DEFAULTWINDOWSIZE - (pos - buf.head)
-	// myDebug.Debugln("old win: %v, new win: %v, pos: %v, head: %v", buf.window, newWindow, pos, buf.head)
-	if newWindow < buf.window {
-		buf.window = newWindow
-	}
 	//-------|-----|--------xxxxxx
 	oldPos := seg.TCPhdr.SeqNum
 	fmt.Println("old una", buf.una)
@@ -58,6 +53,11 @@ func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 			_, found = buf.buffer[calcIndex(pos)]
 		}
 		buf.una = pos
+	}
+	newWindow := DEFAULTWINDOWSIZE - (buf.una - buf.head)
+	// myDebug.Debugln("old win: %v, new win: %v, pos: %v, head: %v", buf.window, newWindow, pos, buf.head)
+	if newWindow < buf.window {
+		buf.window = newWindow
 	}
 	fmt.Println("new una", buf.una)
 	return buf.una, uint16(buf.window)
