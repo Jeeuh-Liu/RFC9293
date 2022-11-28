@@ -44,12 +44,14 @@ type VTCPConn struct {
 	seq2timestamp map[uint32]time.Time // seq # of 1 segment to expiration time
 	//Recv
 	NonEmptyCond *sync.Cond
+	EstabCond    *sync.Cond
 	RcvBuf       *RecvBuffer
 	CLIChan      chan *proto.NodeCLI
 	CloseChan    chan bool
 	// ZeroProbe
 	zeroProbe bool
 	recvFIN   bool
+	WriteFile bool
 }
 
 func NewNormalSocket(seqNumber uint32, dstPort, srcPort uint16, dstIP, srcIP net.IP) *VTCPConn {
@@ -70,8 +72,10 @@ func NewNormalSocket(seqNumber uint32, dstPort, srcPort uint16, dstIP, srcIP net
 		zeroProbe:     false,
 		recvFIN:       false,
 		CloseChan:     make(chan bool),
+		WriteFile:     false,
 	}
 	conn.NonEmptyCond = sync.NewCond(&conn.mu)
+	conn.EstabCond = sync.NewCond(&conn.mu)
 	go conn.retransmissionLoop()
 	return conn
 }
@@ -141,8 +145,6 @@ func (conn *VTCPConn) SynRev() {
 			conn.seqNum = segRev.TCPhdr.AckNum
 			conn.ackNum = segRev.TCPhdr.SeqNum
 			conn.state = proto.ESTABLISH
-			// conn.RcvBuf.head = conn.ackNum - 1
-			// conn.RcvBuf.una = conn.ackNum - 1
 			conn.RcvBuf.head = segRev.TCPhdr.SeqNum
 			conn.RcvBuf.una = segRev.TCPhdr.SeqNum
 			// [Server] Create rcv buffer
@@ -207,154 +209,6 @@ func (conn *VTCPConn) estabRevAndSend() {
 	}
 }
 
-func (conn *VTCPConn) doFINWAIT1() {
-	timeout := time.After(proto.RetranInterval)
-	for {
-		select {
-		case <-timeout:
-			conn.mu.Lock()
-			conn.send2(FIN, "FIN_WAIT1 RESEND FIN")
-			conn.mu.Unlock()
-			timeout = time.After(proto.RetranInterval)
-		case segRev := <-conn.SegRcvChan:
-			flag := segRev.TCPhdr.Flags
-			if flag == ACK {
-				if segRev.TCPhdr.AckNum <= conn.seqNum {
-					conn.HandleRcvSegInSendBuffer(segRev)
-				}
-				if segRev.TCPhdr.AckNum == conn.seqNum+1 {
-					conn.mu.Lock()
-					conn.seqNum++
-					conn.state = proto.FINWAIT2
-					conn.PrintIncoming(segRev, "Recv ACK -> FIN_WAIT2")
-					go conn.doFINWAIT2()
-					conn.mu.Unlock()
-					return
-				}
-			}
-			if flag == FIN {
-				ackMyFIN := segRev.TCPhdr.AckNum == conn.seqNum+1
-				recvAll := conn.ackNum == segRev.TCPhdr.SeqNum
-				if !recvAll {
-					conn.PrintIncoming(segRev, "Recv SIMUL FIN & MISSING DATA")
-					conn.mu.Lock()
-					conn.send2(ACK, "ACK SIMUL FIN BUT MISSING DATA")
-					conn.mu.Unlock()
-				} else {
-					if ackMyFIN {
-						conn.PrintIncoming(segRev, "Recv SIMUL FIN & ACK MY FIN")
-						conn.mu.Lock()
-						conn.ackNum++
-						conn.state = proto.TIMEWAIT
-						conn.send2(ACK, "ACK SIMUL FIN+ACK -> TIME WAIT")
-						go conn.doTimeWait()
-						conn.mu.Unlock()
-					} else {
-						conn.PrintIncoming(segRev, "Recv SIMUL FIN & NOT ACK MY FIN")
-						conn.mu.Lock()
-						conn.seqNum++
-						conn.ackNum++
-						conn.state = proto.CLOSING
-						conn.send2(ACK, "ACK SIMUL FIN -> CLOSING")
-						go conn.doClosing()
-						conn.mu.Unlock()
-					}
-					return
-				}
-			}
-		}
-	}
-}
-
-func (conn *VTCPConn) doFINWAIT2() {
-	for {
-		segRev := <-conn.SegRcvChan
-		finpkt := segRev.TCPhdr.Flags == FIN
-		latestFin := conn.ackNum == segRev.TCPhdr.SeqNum
-		if segRev.TCPhdr.Flags == header.TCPFlagAck {
-			conn.handleACKSeg(segRev)
-		}
-		if finpkt && latestFin {
-			conn.PrintIncoming(segRev, "RECV FIN")
-			conn.mu.Lock()
-			conn.ackNum++
-			conn.send2(ACK, "ACK FIN -> TIME_W")
-			conn.state = proto.TIMEWAIT
-			go conn.doTimeWait()
-			conn.mu.Unlock()
-			return
-		}
-		conn.PrintIncoming(segRev, "maybe error")
-	}
-}
-
-func (conn *VTCPConn) doLastAck() {
-	timeout := time.After(proto.RetranInterval)
-	for {
-		select {
-		case <-timeout:
-			conn.mu.Lock()
-			conn.send2(FIN, "CLOSE_W RESEND FIN")
-			conn.mu.Unlock()
-			timeout = time.After(proto.RetranInterval)
-		case segRev := <-conn.SegRcvChan:
-			conn.PrintIncoming(segRev, "RECV LAST ACK")
-			isAck := segRev.TCPhdr.Flags == ACK
-			ackMe := segRev.TCPhdr.AckNum-1 == conn.seqNum
-			if isAck && ackMe {
-				conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_DELETECONN, Val16: conn.ID}
-				return
-			}
-		}
-	}
-}
-
-func (conn *VTCPConn) doTimeWait() {
-	//conn.BlockChan <- &proto.NodeCLI{CLIType: proto.CLI_CLOSESOCKET, Val16: conn.ID}
-	timeout := time.After(proto.RetranInterval)
-	for {
-		select {
-		case <-timeout:
-			conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_DELETECONN, Val16: conn.ID}
-			return
-		case <-conn.SegRcvChan:
-			conn.mu.Lock()
-			conn.send2(ACK, "TIME WAIT RESEND ACK")
-			conn.mu.Unlock()
-			go conn.doTimeWait()
-			return
-		}
-	}
-}
-
-func (conn *VTCPConn) doClosing() {
-	timeout := time.After(proto.RetranInterval)
-	for {
-		select {
-		case <-timeout:
-			conn.mu.Lock()
-			conn.send2(ACK, "CLOSING RESEND ACK")
-			conn.mu.Unlock()
-			timeout = time.After(proto.RetranInterval)
-		case segRev := <-conn.SegRcvChan:
-			conn.PrintIncoming(segRev, "RECV LAST ACK")
-			isAck := segRev.TCPhdr.Flags == ACK
-			isFin := segRev.TCPhdr.Flags == FIN
-			ackMe := segRev.TCPhdr.AckNum-1 == conn.seqNum
-			if isAck && ackMe {
-				go conn.doTimeWait()
-				return
-			}
-			if isFin {
-				conn.mu.Lock()
-				conn.send2(ACK, "CLOSING RESEND ACK")
-				conn.mu.Unlock()
-				timeout = time.After(proto.RetranInterval)
-			}
-		}
-	}
-}
-
 func (conn *VTCPConn) handleACKSeg(seg *proto.Segment) {
 	if len(seg.Payload) == 0 {
 		conn.HandleRcvSegInSendBuffer(seg)
@@ -384,6 +238,28 @@ func (conn *VTCPConn) VSBufferWrite(content []byte) {
 			conn.wcv.Wait()
 		}
 	}
+}
+
+func (conn *VTCPConn) VSBufferWriteFile(fd *os.File) {
+	// 	conn.mu.Lock()
+	// 	defer conn.mu.Unlock()
+	// 	// fmt.Println("Hello")
+	// 	total := uint32(len(content))
+	// 	for total > 0 {
+	// 		// fmt.Printf("Hello1, isFull: %v\n", conn.sb.IsFull())
+	// 		if !conn.sb.IsFull() {
+	// 			bnum := conn.sb.WriteIntoBuffer(content)
+	// 			myDebug.Debugln("[Client] %v:%v writes %v bytes into send buffer, CurrSendBuffer:%v", conn.LocalAddr.String(), conn.LocalPort, bnum, string(conn.sb.buffer))
+	// 			total -= bnum
+	// 			content = content[bnum:]
+	// 			conn.scv.Signal()
+	// 			// fmt.Println("Hello2")
+	// 		} else {
+	// 			conn.wcv.Wait()
+	// 		}
+	// 	}
+	//	conn.CloseChan <- true
+	//	fd.Close()
 }
 
 func (conn *VTCPConn) VSBufferSend() {
