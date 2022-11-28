@@ -174,15 +174,15 @@ func (node *Node) ScanClI() {
 					fmt.Printf("%v\n", err)
 					continue
 				}
-				port, err := strconv.Atoi(ws[2])
+				port, err := strconv.Atoi(ws[3])
 				if err != nil {
 					fmt.Printf("%v\n", err)
 					continue
 				}
 				cli := &proto.NodeCLI{DestIP: ws[2], DestPort: uint16(port)}
 				conn := node.HandleCreateConn(cli)
-				conn.WriteFile = true
-				go conn.VSBufferWriteFile(fd)
+				conn.Fd = fd
+				go conn.VSBufferWriteFile()
 				//pull data from fd
 				//wait for all the data is sent
 			} else {

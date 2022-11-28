@@ -53,7 +53,7 @@ type VTCPConn struct {
 	// ZeroProbe
 	zeroProbe bool
 	recvFIN   bool
-	WriteFile bool
+	Fd        *os.File
 }
 
 func NewNormalSocket(seqNumber uint32, dstPort, srcPort uint16, dstIP, srcIP net.IP) *VTCPConn {
@@ -74,7 +74,7 @@ func NewNormalSocket(seqNumber uint32, dstPort, srcPort uint16, dstIP, srcIP net
 		zeroProbe:     false,
 		recvFIN:       false,
 		CloseChan:     make(chan bool),
-		WriteFile:     false,
+		Fd:            nil,
 	}
 	conn.NonEmptyCond = sync.NewCond(&conn.mu)
 	conn.EstabCond = sync.NewCond(&conn.mu)
@@ -118,6 +118,9 @@ func (conn *VTCPConn) SynSend() {
 			conn.RcvBuf = NewRecvBuffer(conn.ackNum, DEFAULTWINDOWSIZE)
 			// [Client] Rev Segments
 			go conn.estabRevAndSend()
+			if conn.Fd != nil {
+				conn.VSBufferWriteFile()
+			}
 			return
 		}
 	}
@@ -242,13 +245,9 @@ func (conn *VTCPConn) VSBufferWrite(content []byte) {
 	}
 }
 
-func (conn *VTCPConn) VSBufferWriteFile(fd *os.File) {
-	conn.mu.Lock()
-	for conn.WriteFile && conn.state != proto.ESTABLISH {
-		conn.EstabCond.Wait()
-	}
-	conn.mu.Unlock()
+func (conn *VTCPConn) VSBufferWriteFile() {
 
+	fd := conn.Fd
 	reader := bufio.NewReader(fd)
 	content := make([]byte, conn.sb.win)
 	num2Send, err := reader.Read(content)
