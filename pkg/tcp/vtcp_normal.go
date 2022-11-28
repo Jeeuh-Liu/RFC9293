@@ -153,6 +153,7 @@ func (conn *VTCPConn) estabRevAndSend() {
 	for {
 		segRev := <-conn.SegRcvChan
 		// it is possible ACK is lost and we get another SynAck
+		myDebug.Debugln("156: %v, %v, %v", segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum, string(segRev.Payload))
 		if len(segRev.Payload) == 0 {
 			// Rcv segments In Send Buffer
 			conn.HandleRcvSegInSendBuffer(segRev)
@@ -337,6 +338,12 @@ func (conn *VTCPConn) HandleRcvSegInRcvBuffer(segRev *proto.Segment) {
 	// 	}
 	// }
 	ackNum, windowSize := conn.RcvBuf.WriteSeg2Buf(segRev)
+	headAcked := conn.RcvBuf.IsHeadAcked()
+	if headAcked {
+		conn.ackNum = ackNum
+		conn.windowSize = windowSize
+		conn.NonEmptyCond.Broadcast()
+	}
 
 	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck, conn.seqNum), []byte{})
 	myDebug.Debugln("[Server] Current recv buffer content: %v", conn.RcvBuf.DisplayBuf())
@@ -344,13 +351,7 @@ func (conn *VTCPConn) HandleRcvSegInRcvBuffer(segRev *proto.Segment) {
 		conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
 		conn.RemotePort, conn.seqNum, conn.ackNum, conn.windowSize)
 	conn.NodeSegSendChan <- seg
-	headAcked := conn.RcvBuf.IsHeadAcked()
 	conn.mu.Unlock()
-	if headAcked {
-		conn.ackNum = ackNum
-		conn.windowSize = windowSize
-		conn.NonEmptyCond.Broadcast()
-	}
 }
 
 func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
