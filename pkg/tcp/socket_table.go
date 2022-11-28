@@ -31,14 +31,12 @@ func (table *SocketTable) PrintSockets() {
 	fmt.Printf("%-8v %-16v %-12v %-12v %-12v %-12v\n", "socket", "local-addr", "port", "dst-addr", "port", "status")
 	fmt.Println("--------------------------------------------------------------")
 	// Print out Listener Conns
-	for i := 0; i < int(table.counter); i++ {
-		if conn, ok := table.id2Listeners[uint16(i)]; ok {
-			fmt.Printf("%-8v %-16v %-12v %-12v %-12v %-12v\n", i, "0.0.0.0", conn.localPort, "0.0.0.0", "0", conn.state)
-		} else {
-			conn := table.id2Conns[uint16(i)]
-			// 0       10.0.0.1        1024            10.0.0.14       80      ESTAB
-			fmt.Printf("%-8v %-16v %-12v %-12v %-12v %-12v \n", i, conn.LocalAddr, conn.LocalPort, conn.RemoteAddr, conn.RemotePort, conn.state)
-		}
+	for _, ls := range table.id2Listeners {
+		fmt.Printf("%-8v %-16v %-12v %-12v %-12v %-12v\n", ls.ID, "0.0.0.0", ls.localPort, "0.0.0.0", "0", ls.state)
+	}
+	for _, conn := range table.id2Conns {
+		// 0       10.0.0.1        1024            10.0.0.14       80      ESTAB
+		fmt.Printf("%-8v %-16v %-12v %-12v %-12v %-12v \n", conn.ID, conn.LocalAddr, conn.LocalPort, conn.RemoteAddr, conn.RemotePort, conn.state)
 	}
 }
 
@@ -63,6 +61,19 @@ func (table *SocketTable) OfferConn(conn *VTCPConn) {
 	table.tuple2NormalConns[tuple] = conn
 	table.counter++
 	table.ConnPort++
+}
+
+func (table *SocketTable) DeleteSocket(id uint16) {
+	if conn, found := table.id2Conns[id]; found {
+		tuple := conn.GetTuple()
+		delete(table.id2Conns, id)
+		delete(table.tuple2NormalConns, tuple)
+	}
+	if ls, found := table.id2Listeners[id]; found {
+		port := ls.localPort
+		delete(table.id2Listeners, id)
+		delete(table.port2Listeners, port)
+	}
 }
 
 func (table *SocketTable) FindListener(port uint16) *VTCPListener {

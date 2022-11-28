@@ -129,7 +129,8 @@ func (node *Node) ScanClI() {
 				if err != nil {
 					return
 				}
-				content := []byte(ws[2])
+				content := []byte(proto.TestString)
+				// content := []byte(ws[2])
 				cli := &proto.NodeCLI{CLIType: proto.CLI_SENDSEGMENT, Val16: uint16(id), Bytes: content}
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 4 && ws[0] == "r" {
@@ -145,6 +146,25 @@ func (node *Node) ScanClI() {
 				cli := &proto.NodeCLI{CLIType: proto.CLI_RECVSEGMENT, Bytes: isBlock,
 					Val16: uint16(socketId), Val32: uint32(numBytes)}
 				node.NodeCLIChan <- cli
+			} else if len(ws) == 3 && ws[0] == "rf" {
+				path := ws[1]
+				_, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0x777)
+				if err != nil {
+					fmt.Printf("%v\n", err)
+				}
+				port, err := strconv.Atoi(ws[2])
+				if err != nil {
+					fmt.Printf("%v\n", err)
+				}
+				ls := node.socketTable.OfferListener(uint16(port))
+				go node.NodeAcceptLoop(ls, true)
+			} else if len(ws) == 2 && ws[0] == "cl" {
+				socketId, err := strconv.Atoi(ws[1])
+				if err != nil {
+					return
+				}
+				node.socketTable.DeleteSocket(uint16(socketId))
+				fmt.Printf("\n> ")
 			} else {
 				fmt.Printf("Invalid command\n> ")
 			}
