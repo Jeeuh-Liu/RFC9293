@@ -42,7 +42,7 @@ type VTCPConn struct {
 	//Recv
 	NonEmptyCond *sync.Cond
 	RcvBuf       *RecvBuffer
-	BlockChan    chan *proto.NodeCLI
+	CLIChan      chan *proto.NodeCLI
 	// ZeroProbe
 	zeroProbe bool
 }
@@ -275,8 +275,19 @@ func (conn *VTCPConn) retransmitHS(segR *proto.Segment) {
 	}
 	// retransmit if not acked
 	fmt.Printf("[Client] retransmit 1 HS segment flag: %v because current seqNum is %v and should be at least %v\n", segR.TCPhdr.Flags, conn.seqNum, segR.TCPhdr.SeqNum+1)
-	conn.NodeSegSendChan <- segR
-	conn.rtmQueue <- segR
+	if uint16(len(segR.Payload)) > uint16(conn.sb.win) {
+		subload1 := segR.Payload[:conn.sb.win]
+		subload2 := segR.Payload[conn.sb.win:]
+		seg1 := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck, conn.seqNum), subload1)
+		conn.NodeSegSendChan <- seg1
+		conn.rtmQueue <- seg1
+		seg2 := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck, conn.seqNum+conn.sb.win), subload2)
+		conn.NodeSegSendChan <- seg2
+		conn.rtmQueue <- segR
+	} else {
+		conn.NodeSegSendChan <- segR
+		conn.rtmQueue <- segR
+	}
 }
 
 func (conn *VTCPConn) retransmit(segR *proto.Segment) {
@@ -315,6 +326,9 @@ func (conn *VTCPConn) HandleRcvSegInRcvBuffer(segRev *proto.Segment) {
 	}
 	status := conn.RcvBuf.GetSegStatus(segRev)
 	// fmt.Println("status:", status)
+	if status == SENDERDUTY {
+		//
+	}
 	if status == OUTSIDEWINDOW {
 		// bug_fix: unlock when call return
 		conn.mu.Unlock()
@@ -357,13 +371,14 @@ func (conn *VTCPConn) HandleRcvSegInRcvBuffer(segRev *proto.Segment) {
 func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 	res := []byte{}
 	totalRead := uint32(0)
-	// conn.BlockChan <- &proto.NodeCLI{CLIType: proto.CLI_BLOCKCLI}
+	toRead := numBytes
+	conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_BLOCKCLI}
 	for {
 		conn.mu.Lock()
-		if !conn.RcvBuf.IsHeadAcked() {
+		for !conn.RcvBuf.IsHeadAcked() {
 			conn.NonEmptyCond.Wait()
 		}
-		output, numRead := conn.RcvBuf.ReadBuf(numBytes)
+		output, numRead := conn.RcvBuf.ReadBuf(toRead)
 		conn.windowSize += numRead
 		conn.RcvBuf.SetWindowSize(uint32(conn.windowSize))
 		res = append(res, output...)
@@ -371,18 +386,18 @@ func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 		myDebug.Debugln("[Server] To READ %v bytes, return %v bytes, content %v, buffer %v, currWindowSize %v",
 			numBytes, totalRead, string(res), conn.RcvBuf.DisplayBuf(), conn.windowSize)
 
-		if string(res) == proto.TestString {
-			println("************************************************")
-			fmt.Println("Woww!!!!!!!!")
-			println("************************************************")
-		}
+		// if string(res) == proto.TestString {
+		// 	println("************************************************")
+		// 	fmt.Println("Woww!!!!!!!!")
+		// 	println("************************************************")
+		// }
 		conn.mu.Unlock()
+		toRead -= uint32(numRead)
 		if !isBlock || totalRead == numBytes {
 			break
 		}
 	}
-	// conn.BlockChan <- &proto.NodeCLI{CLIType: proto.CLI_UNBLOCKCLI}
-	fmt.Printf("now head point to %v\n", conn.RcvBuf.head)
+	conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_UNBLOCKCLI}
 }
 
 // ********************************************************************************************
