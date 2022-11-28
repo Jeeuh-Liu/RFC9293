@@ -129,8 +129,8 @@ func (node *Node) ScanClI() {
 				if err != nil {
 					continue
 				}
-				content := []byte(proto.TestString)
-				// content := []byte(ws[2])
+				// content := []byte(proto.TestString)
+				content := []byte(ws[2])
 				cli := &proto.NodeCLI{CLIType: proto.CLI_SENDSEGMENT, Val16: uint16(id), Bytes: content}
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 4 && ws[0] == "r" {
@@ -181,10 +181,10 @@ func (node *Node) ScanClI() {
 				}
 				cli := &proto.NodeCLI{DestIP: ws[2], DestPort: uint16(port)}
 				conn := node.HandleCreateConn(cli)
+				conn.WriteFile = true
+				go conn.VSBufferWriteFile(fd)
 				//pull data from fd
 				//wait for all the data is sent
-				conn.CloseChan <- true
-				fd.Close()
 			} else {
 				fmt.Printf("Invalid command\n> ")
 			}

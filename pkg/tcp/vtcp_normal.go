@@ -1,7 +1,9 @@
 package tcp
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"os"
@@ -241,25 +243,38 @@ func (conn *VTCPConn) VSBufferWrite(content []byte) {
 }
 
 func (conn *VTCPConn) VSBufferWriteFile(fd *os.File) {
-	// 	conn.mu.Lock()
-	// 	defer conn.mu.Unlock()
-	// 	// fmt.Println("Hello")
-	// 	total := uint32(len(content))
-	// 	for total > 0 {
-	// 		// fmt.Printf("Hello1, isFull: %v\n", conn.sb.IsFull())
-	// 		if !conn.sb.IsFull() {
-	// 			bnum := conn.sb.WriteIntoBuffer(content)
-	// 			myDebug.Debugln("[Client] %v:%v writes %v bytes into send buffer, CurrSendBuffer:%v", conn.LocalAddr.String(), conn.LocalPort, bnum, string(conn.sb.buffer))
-	// 			total -= bnum
-	// 			content = content[bnum:]
-	// 			conn.scv.Signal()
-	// 			// fmt.Println("Hello2")
-	// 		} else {
-	// 			conn.wcv.Wait()
-	// 		}
-	// 	}
-	//	conn.CloseChan <- true
-	//	fd.Close()
+	conn.mu.Lock()
+	for conn.WriteFile && conn.state != proto.ESTABLISH {
+		conn.EstabCond.Wait()
+	}
+	conn.mu.Unlock()
+
+	reader := bufio.NewReader(fd)
+	content := make([]byte, conn.sb.win)
+	num2Send, err := reader.Read(content)
+
+	for err == nil {
+
+		for num2Send > 0 {
+			// fmt.Printf("Hello1, isFull: %v\n", conn.sb.IsFull())
+			if !conn.sb.IsFull() {
+				bnum := conn.sb.WriteIntoBuffer(content)
+				myDebug.Debugln("[Client] %v:%v writes %v bytes into send buffer, CurrSendBuffer:%v", conn.LocalAddr.String(), conn.LocalPort, bnum, string(conn.sb.buffer))
+				num2Send -= int(bnum)
+				content = content[bnum:]
+				conn.scv.Signal()
+				// fmt.Println("Hello2")
+			} else {
+				conn.wcv.Wait()
+			}
+		}
+
+	}
+	if err != io.EOF {
+		fmt.Println(err)
+	}
+	conn.CloseChan <- true
+	fd.Close()
 }
 
 func (conn *VTCPConn) VSBufferSend() {
