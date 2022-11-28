@@ -134,8 +134,10 @@ func (conn *VTCPConn) SynRev() {
 			conn.seqNum = segRev.TCPhdr.AckNum
 			conn.ackNum = segRev.TCPhdr.SeqNum
 			conn.state = proto.ESTABLISH
-			conn.RcvBuf.head = conn.ackNum - 1
-			conn.RcvBuf.una = conn.ackNum - 1
+			// conn.RcvBuf.head = conn.ackNum - 1
+			// conn.RcvBuf.una = conn.ackNum - 1
+			conn.RcvBuf.head = segRev.TCPhdr.SeqNum
+			conn.RcvBuf.una = segRev.TCPhdr.SeqNum
 			// [Server] Create rcv buffer
 			// go conn.estabRev()
 			// [Server] Rev Segments

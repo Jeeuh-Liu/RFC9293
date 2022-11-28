@@ -1,7 +1,6 @@
 package tcp
 
 import (
-	"fmt"
 	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
 )
@@ -32,45 +31,74 @@ func NewRecvBuffer(seq uint32, sz uint32) *RecvBuffer {
 }
 
 func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
-	pos := seg.TCPhdr.SeqNum
-	// bug fix: first byte acked doesn't mean all bytes in payload have been acked
-	// we must add it to map as many as possible (length of payload can get out of range)
-	// _, acked := buf.buffer[calcIndex(pos)]
-	// pos cannot write into a position too far away
-	// if acked {
-	// 	return buf.una, uint16(buf.window)
+	// pos := seg.TCPhdr.SeqNum
+	// // bug fix: first byte acked doesn't mean all bytes in payload have been acked
+	// // we must add it to map as many as possible (length of payload can get out of range)
+	// // _, acked := buf.buffer[calcIndex(pos)]
+	// // pos cannot write into a position too far away
+	// // if acked {
+	// // 	return buf.una, uint16(buf.window)
+	// // }
+	// //ack,b
+	// acked := uint32(0)
+	// for _, b := range seg.Payload {
+	// 	// ignore the acked
+	// 	if pos < buf.head {
+	// 		acked += 1
+	// 		pos++
+	// 	} else if pos >= buf.head+DEFAULTWINDOWSIZE {
+	// 		// break if too far away
+	// 		break
+	// 	} else {
+	// 		buf.buffer[calcIndex(pos)] = b
+	// 		pos++
+	// 	}
 	// }
+	// start := seg.TCPhdr.SeqNum + uint32(acked)
+	// fmt.Println("start is:", start)
+	// //-------|-----|--------xxxxxx
+	// if buf.una == start {
+	// 	_, found := buf.buffer[calcIndex(pos)]
+	// 	// at most ack windowsize bytes and cannot move back to buf.head
+	// 	for found && pos < buf.head+DEFAULTWINDOWSIZE {
+	// 		pos++
+	// 		_, found = buf.buffer[calcIndex(pos)]
+	// 	}
+	// 	buf.una = pos
+	// }
+	// newWindow := DEFAULTWINDOWSIZE - (buf.una - buf.head)
+	// // myDebug.Debugln("old win: %v, new win: %v, pos: %v, head: %v", buf.window, newWindow, pos, buf.head)
+	// if newWindow < buf.window {
+	// 	buf.window = newWindow
+	// }
+	// return buf.una, uint16(buf.window)
+
+	pos := seg.TCPhdr.SeqNum
+	_, acked := buf.buffer[pos]
+	if acked {
+		return buf.una, uint16(buf.window)
+	}
 	//ack,b
-	acked := uint32(0)
 	for _, b := range seg.Payload {
-		// ignore the acked
-		if pos < buf.head {
-			acked += 1
-			pos++
-		} else if pos >= buf.head+DEFAULTWINDOWSIZE {
-			// break if too far away
+		buf.buffer[calcIndex(pos)] = b
+		pos++
+		if pos >= buf.head+DEFAULTWINDOWSIZE {
 			break
-		} else {
-			buf.buffer[calcIndex(pos)] = b
-			pos++
 		}
 	}
-	start := seg.TCPhdr.SeqNum + uint32(acked)
-	fmt.Println("start is:", start)
-	//-------|-----|--------xxxxxx
-	if buf.una == start {
-		_, found := buf.buffer[calcIndex(pos)]
-		// at most ack windowsize bytes and cannot move back to buf.head
-		for found && pos < buf.head+DEFAULTWINDOWSIZE {
-			pos++
-			_, found = buf.buffer[calcIndex(pos)]
-		}
-		buf.una = pos
-	}
-	newWindow := DEFAULTWINDOWSIZE - (buf.una - buf.head)
+	newWindow := DEFAULTWINDOWSIZE - (pos - buf.head)
 	// myDebug.Debugln("old win: %v, new win: %v, pos: %v, head: %v", buf.window, newWindow, pos, buf.head)
 	if newWindow < buf.window {
 		buf.window = newWindow
+	}
+	//-------|-----|--------xxxxxx
+	if buf.una == seg.TCPhdr.SeqNum {
+		_, found := buf.buffer[pos]
+		for found {
+			pos++
+			_, found = buf.buffer[pos]
+		}
+		buf.una = pos
 	}
 	return buf.una, uint16(buf.window)
 }
@@ -111,6 +139,9 @@ func (buf *RecvBuffer) DisplayBuf() string {
 
 func (buf *RecvBuffer) GetSegStatus(seg *proto.Segment) uint8 {
 	seq := seg.TCPhdr.SeqNum
+	// if seq+uint32(len(seg.Payload)) > buf.head+uint32(DEFAULTWINDOWSIZE) {
+	// 	return SENDERDUTY
+	// }
 	// bug_fix: seq > buf.head+uint32(DEFAULTWINDOWSIZE)
 	// bug_fix if seq < buf.head => unacked
 	if seq >= buf.head+uint32(DEFAULTWINDOWSIZE) {
