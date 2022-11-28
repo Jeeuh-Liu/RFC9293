@@ -108,6 +108,7 @@ func (node *Node) ScanClI() {
 				node.NodeCLIChan <- cli
 			} else if (len(ws) == 1 || len(ws) == 2) && ws[0] == "ls" {
 				if len(ws) == 1 {
+					os.Stdout.Write([]byte("enter 112\n"))
 					cli := proto.NewNodeCLI(proto.CLI_LS, 0, []byte{}, "", 0, 0, "", "")
 					node.NodeCLIChan <- cli
 				} else {
@@ -120,14 +121,14 @@ func (node *Node) ScanClI() {
 				portS := ws[2]
 				port, err := strconv.Atoi(portS)
 				if err != nil {
-					return
+					continue
 				}
 				cli := proto.NewNodeCLI(proto.CLI_CREATECONN, 0, []byte{}, ipAddr, uint16(port), 0, "", "")
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 3 && ws[0] == "s" {
 				id, err := strconv.Atoi(ws[1])
 				if err != nil {
-					return
+					continue
 				}
 				content := []byte(proto.TestString)
 				// content := []byte(ws[2])
@@ -136,11 +137,11 @@ func (node *Node) ScanClI() {
 			} else if len(ws) == 4 && ws[0] == "r" {
 				socketId, err := strconv.Atoi(ws[1])
 				if err != nil {
-					return
+					continue
 				}
 				numBytes, err := strconv.Atoi(ws[2])
 				if err != nil {
-					return
+					continue
 				}
 				isBlock := []byte(ws[3])
 				cli := &proto.NodeCLI{CLIType: proto.CLI_RECVSEGMENT, Bytes: isBlock,
@@ -148,20 +149,23 @@ func (node *Node) ScanClI() {
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 3 && ws[0] == "rf" {
 				path := ws[1]
-				_, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0x777)
+				fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0x777)
 				if err != nil {
 					fmt.Printf("%v\n", err)
+					continue
 				}
 				port, err := strconv.Atoi(ws[2])
 				if err != nil {
 					fmt.Printf("%v\n", err)
+					continue
 				}
 				ls := node.socketTable.OfferListener(uint16(port))
 				go node.NodeAcceptLoop(ls, true)
+				ls.CLIChan <- &proto.NodeCLI{Fd: fd}
 			} else if len(ws) == 2 && ws[0] == "cl" {
 				socketId, err := strconv.Atoi(ws[1])
 				if err != nil {
-					return
+					continue
 				}
 				node.socketTable.DeleteSocket(uint16(socketId))
 				fmt.Printf("\n> ")

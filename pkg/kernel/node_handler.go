@@ -15,7 +15,7 @@ func (node *Node) ReceiveOpFromChan() {
 	for {
 		select {
 		case nodeCLI := <-node.NodeCLIChan:
-			// fmt.Println(nodeCLI)
+			fmt.Println(nodeCLI)
 			node.HandleNodeCLI(nodeCLI)
 		case nodeBC := <-node.NodeBCChan:
 			// fmt.Println(nodeBC)
@@ -79,6 +79,8 @@ func (node *Node) HandleNodeCLI(nodeCLI *proto.NodeCLI) {
 	case proto.CLI_UNBLOCKCLI:
 		node.blockCLI = false
 		fmt.Printf("> ")
+	case proto.CLI_DELETECONN:
+		node.socketTable.DeleteSocket(nodeCLI.Val16)
 	}
 }
 

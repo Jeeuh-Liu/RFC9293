@@ -80,7 +80,7 @@ func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 	}
 	//ack,b
 	for _, b := range seg.Payload {
-		buf.buffer[calcIndex(pos)] = b
+		buf.buffer[pos] = b
 		pos++
 		if pos >= buf.head+DEFAULTWINDOWSIZE {
 			break
@@ -107,7 +107,7 @@ func (buf *RecvBuffer) ReadBuf(numBytes uint32) ([]byte, uint16) {
 	output := []byte{}
 	cnt := uint32(0)
 	for cnt < numBytes && buf.head < buf.una {
-		index := calcIndex(buf.head)
+		index := buf.head
 		b := buf.buffer[index]
 		delete(buf.buffer, index)
 
@@ -126,7 +126,7 @@ func (buf *RecvBuffer) DisplayBuf() string {
 	res := []byte{}
 	pos := buf.head
 	for cnt := 0; cnt < DEFAULTWINDOWSIZE; cnt++ {
-		val, acked := buf.buffer[calcIndex(pos)]
+		val, acked := buf.buffer[pos]
 		if acked {
 			res = append(res, val)
 		} else {
@@ -164,9 +164,9 @@ func (buf *RecvBuffer) SetWindowSize(size uint32) {
 	buf.window = size
 }
 
-func calcIndex(pos uint32) uint32 {
-	return pos % DEFAULTWINDOWSIZE
-}
+// func calcIndex(pos uint32) uint32 {
+// 	return pos % DEFAULTWINDOWSIZE
+// }
 
 func (buf *RecvBuffer) GetWindowSize() uint16 {
 	return uint16(buf.window)

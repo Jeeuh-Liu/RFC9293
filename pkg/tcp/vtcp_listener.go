@@ -16,6 +16,7 @@ type VTCPListener struct {
 	SegRcvChan  chan *proto.Segment
 	ConnInQueue int
 	CancelChan  chan bool
+	CLIChan     chan *proto.NodeCLI
 }
 
 func NewListener(port uint16) *VTCPListener {
@@ -26,6 +27,7 @@ func NewListener(port uint16) *VTCPListener {
 		SegRcvChan:  make(chan *proto.Segment),
 		ConnInQueue: 0,
 		CancelChan:  make(chan bool),
+		CLIChan:     make(chan *proto.NodeCLI),
 	}
 	go listener.VListenerAcceptLoop()
 	return listener

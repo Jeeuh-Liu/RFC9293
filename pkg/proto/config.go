@@ -1,5 +1,7 @@
 package proto
 
+import "time"
+
 // API of node
 const (
 	// Command Line Interface
@@ -19,6 +21,7 @@ const (
 	CLI_BLOCKCLI       = uint8(13)
 	CLI_UNBLOCKCLI     = uint8(14)
 	CLI_CLOSE          = uint8(15)
+	CLI_DELETECONN     = uint8(16)
 	// network pass Packet to link
 	MESSAGE_BCRIPREQ  = uint8(20)
 	MESSAGE_BCRIPRESP = uint8(21)
@@ -36,7 +39,12 @@ const (
 	LISTENER  = "LISTENER"
 	SYN_RECV  = "SYN_RECV"
 	ESTABLISH = "ESTABLISH"
-
+	CLOSEWAIT = "CLOSE_W"
+	FINWAIT1  = "FIN_W1"
+	FINWAIT2  = "FIN_W2"
+	TIMEWAIT  = "TIME_W"
+	CLOSING   = "CLOSING"
+	LASTACK   = "LAST_ACK"
 	// the first port we allocate for conn
 	FIRST_PORT = 0
 
@@ -49,6 +57,8 @@ const (
 	// BUFFER_SIZE = 1 << 16
 	BUFFER_SIZE = uint32(10)
 	MAXCONNUM   = uint16(65535)
+
+	RetranInterval = 300 * time.Millisecond
 )
 
 const TestString = "123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz"
