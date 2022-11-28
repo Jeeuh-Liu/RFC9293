@@ -46,7 +46,7 @@ type VTCPConn struct {
 	NonEmptyCond *sync.Cond
 	RcvBuf       *RecvBuffer
 	CLIChan      chan *proto.NodeCLI
-	closeChan    chan bool
+	CloseChan    chan bool
 	// ZeroProbe
 	zeroProbe bool
 	recvFIN   bool
@@ -69,7 +69,7 @@ func NewNormalSocket(seqNumber uint32, dstPort, srcPort uint16, dstIP, srcIP net
 		seq2timestamp: make(map[uint32]time.Time),
 		zeroProbe:     false,
 		recvFIN:       false,
-		closeChan:     make(chan bool),
+		CloseChan:     make(chan bool),
 	}
 	conn.NonEmptyCond = sync.NewCond(&conn.mu)
 	go conn.retransmissionLoop()
@@ -187,7 +187,7 @@ func (conn *VTCPConn) estabRevAndSend() {
 					conn.mu.Unlock()
 				}
 			}
-		case <-conn.closeChan:
+		case <-conn.CloseChan:
 			if conn.state == proto.ESTABLISH {
 				conn.mu.Lock()
 				conn.state = proto.FINWAIT1

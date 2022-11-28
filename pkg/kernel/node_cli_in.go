@@ -108,7 +108,6 @@ func (node *Node) ScanClI() {
 				node.NodeCLIChan <- cli
 			} else if (len(ws) == 1 || len(ws) == 2) && ws[0] == "ls" {
 				if len(ws) == 1 {
-					os.Stdout.Write([]byte("enter 112\n"))
 					cli := proto.NewNodeCLI(proto.CLI_LS, 0, []byte{}, "", 0, 0, "", "")
 					node.NodeCLIChan <- cli
 				} else {
@@ -149,7 +148,7 @@ func (node *Node) ScanClI() {
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 3 && ws[0] == "rf" {
 				path := ws[1]
-				fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0x777)
+				fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0x666)
 				if err != nil {
 					fmt.Printf("%v\n", err)
 					continue
@@ -169,6 +168,23 @@ func (node *Node) ScanClI() {
 				}
 				node.socketTable.DeleteSocket(uint16(socketId))
 				fmt.Printf("\n> ")
+			} else if len(ws) == 4 && ws[0] == "sf" {
+				fd, err := os.OpenFile(ws[1], os.O_RDONLY, 0x666)
+				if err != nil {
+					fmt.Printf("%v\n", err)
+					continue
+				}
+				port, err := strconv.Atoi(ws[2])
+				if err != nil {
+					fmt.Printf("%v\n", err)
+					continue
+				}
+				cli := &proto.NodeCLI{DestIP: ws[2], DestPort: uint16(port)}
+				conn := node.HandleCreateConn(cli)
+				//pull data from fd
+				//wait for all the data is sent
+				conn.CloseChan <- true
+				fd.Close()
 			} else {
 				fmt.Printf("Invalid command\n> ")
 			}
