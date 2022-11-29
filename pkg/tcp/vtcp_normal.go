@@ -269,6 +269,7 @@ func (conn *VTCPConn) VSBufferWriteFile() {
 				conn.wcv.Wait()
 			}
 		}
+		content = make([]byte, conn.sb.win)
 		num2Send, err = reader.Read(content)
 	}
 	if err != io.EOF {
