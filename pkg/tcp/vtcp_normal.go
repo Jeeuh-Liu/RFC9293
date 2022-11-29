@@ -307,18 +307,14 @@ func (conn *VTCPConn) VSBufferSend() {
 			if conn.sb.win == 0 {
 				payload, seqNum := conn.sb.GetZeroProbe()
 				conn.send(payload, seqNum)
-				fmt.Println("Send")
 				conn.zeroProbe = true
 			} else {
 				// Get one segment, send it out and add it to retransmission queue
 				payload, seqNum := conn.sb.GetSegmentToSendAndUpdateNxt(mtu)
 				conn.send(payload, seqNum)
-				fmt.Println("Send")
 			}
 		} else {
-			fmt.Println("Sleep")
 			conn.scv.Wait()
-			fmt.Println("Wake up")
 		}
 	}
 }
@@ -446,8 +442,6 @@ func (conn *VTCPConn) HandleRcvSegInRcvBuffer(segRev *proto.Segment) {
 	// }
 	ackNum, windowSize := conn.RcvBuf.WriteSeg2Buf(segRev)
 	headAcked := conn.RcvBuf.IsHeadAcked()
-	fmt.Println(conn.RcvBuf.head, conn.RcvBuf.una)
-	fmt.Println(ackNum, windowSize, headAcked)
 	if headAcked {
 		conn.ackNum = ackNum
 		conn.windowSize = windowSize

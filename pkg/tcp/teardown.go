@@ -35,6 +35,7 @@ func (conn *VTCPConn) doFINWAIT1() {
 					conn.mu.Unlock()
 					return
 				}
+				fmt.Println("curr seq may be wrong")
 			}
 			if flag == FIN {
 				ackMyFIN := segRev.TCPhdr.AckNum == conn.seqNum+1
