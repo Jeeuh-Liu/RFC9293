@@ -1,6 +1,7 @@
 package tcp
 
 import (
+	"fmt"
 	"tcpip/pkg/proto"
 	"time"
 
@@ -17,12 +18,15 @@ func (conn *VTCPConn) doFINWAIT1() {
 			conn.mu.Unlock()
 			timeout = time.After(proto.RetranInterval)
 		case segRev := <-conn.SegRcvChan:
+			conn.PrintIncoming(segRev, "DEBUG")
 			flag := segRev.TCPhdr.Flags
 			if flag == ACK {
 				if segRev.TCPhdr.AckNum <= conn.seqNum {
+					fmt.Println("enter 24")
 					conn.HandleRcvSegInSendBuffer(segRev)
 				}
 				if segRev.TCPhdr.AckNum == conn.seqNum+1 {
+					fmt.Println("enter 28")
 					conn.mu.Lock()
 					conn.seqNum++
 					conn.state = proto.FINWAIT2

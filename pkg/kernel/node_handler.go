@@ -15,7 +15,6 @@ func (node *Node) ReceiveOpFromChan() {
 	for {
 		select {
 		case nodeCLI := <-node.NodeCLIChan:
-			fmt.Println(nodeCLI)
 			node.HandleNodeCLI(nodeCLI)
 		case nodeBC := <-node.NodeBCChan:
 			// fmt.Println(nodeBC)

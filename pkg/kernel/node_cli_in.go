@@ -166,7 +166,8 @@ func (node *Node) ScanClI() {
 				if err != nil {
 					continue
 				}
-				node.socketTable.DeleteSocket(uint16(socketId))
+				conn := node.socketTable.FindConnByID(uint16(socketId))
+				conn.CloseChan <- true
 				fmt.Printf("\n> ")
 			} else if len(ws) == 4 && ws[0] == "sf" {
 				fd, err := os.OpenFile(ws[1], os.O_RDONLY, 0777)

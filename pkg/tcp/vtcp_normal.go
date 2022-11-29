@@ -198,12 +198,14 @@ func (conn *VTCPConn) estabRevAndSend() {
 				}
 			}
 		case <-conn.CloseChan:
+			fmt.Println("receive bit from closeChan")
 			if conn.state == proto.ESTABLISH {
 				conn.mu.Lock()
 				conn.state = proto.FINWAIT1
 				conn.send2(FIN, "SEND FIN -> FIN_WAIT1")
 				go conn.doFINWAIT1()
 				conn.mu.Unlock()
+				return
 			}
 			if conn.state == proto.CLOSEWAIT {
 				conn.mu.Lock()
@@ -211,8 +213,8 @@ func (conn *VTCPConn) estabRevAndSend() {
 				conn.send2(FIN, "SEND FIN -> LASTACK")
 				go conn.doLastAck()
 				conn.mu.Unlock()
+				return
 			}
-			return
 		}
 	}
 }
