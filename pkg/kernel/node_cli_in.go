@@ -168,6 +168,8 @@ func (node *Node) ScanClI() {
 				}
 				node.socketTable.DeleteSocket(uint16(socketId))
 				fmt.Printf("\n> ")
+				//stdout fd (1M = 1000000000)
+				//sf filename ip port
 			} else if len(ws) == 4 && ws[0] == "sf" {
 				fd, err := os.OpenFile(ws[1], os.O_RDONLY, 0x666)
 				if err != nil {
@@ -182,9 +184,6 @@ func (node *Node) ScanClI() {
 				cli := &proto.NodeCLI{DestIP: ws[2], DestPort: uint16(port)}
 				conn := node.HandleCreateConn(cli)
 				conn.Fd = fd
-				go conn.VSBufferWriteFile()
-				//pull data from fd
-				//wait for all the data is sent
 			} else {
 				fmt.Printf("Invalid command\n> ")
 			}

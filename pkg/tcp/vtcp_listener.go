@@ -57,3 +57,12 @@ func (listener *VTCPListener) VAccept() (*VTCPConn, error) {
 	listener.ConnInQueue--
 	return conn, nil
 }
+
+func (listener *VTCPListener) VClose() {
+	listener.CancelChan <- true
+	for listener.ConnInQueue > 0 {
+		conn := <-listener.ConnQueue
+		listener.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_DELETECONN, Val16: conn.ID}
+	}
+	listener.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_DELETELS, Val16: listener.ID}
+}

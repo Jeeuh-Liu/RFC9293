@@ -22,6 +22,7 @@ const (
 	CLI_UNBLOCKCLI     = uint8(14)
 	CLI_CLOSE          = uint8(15)
 	CLI_DELETECONN     = uint8(16)
+	CLI_DELETELS       = uint8(17)
 	// network pass Packet to link
 	MESSAGE_BCRIPREQ  = uint8(20)
 	MESSAGE_BCRIPRESP = uint8(21)

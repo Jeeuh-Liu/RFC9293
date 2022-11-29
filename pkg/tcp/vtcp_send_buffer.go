@@ -152,3 +152,10 @@ func (sb *SendBuffer) UpdateWin(tcpHeaderWin uint16) {
 func (sb *SendBuffer) IsFull() bool {
 	return sb.total == proto.BUFFER_SIZE
 }
+
+func (sb *SendBuffer) SetInitVal(val uint32) {
+	sb.isn = val
+	sb.una = val
+	sb.nxt = val
+	sb.lbw = val
+}

@@ -86,6 +86,7 @@ func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 			break
 		}
 	}
+	//buf.una - buf.head
 	newWindow := DEFAULTWINDOWSIZE - (pos - buf.head)
 	// myDebug.Debugln("old win: %v, new win: %v, pos: %v, head: %v", buf.window, newWindow, pos, buf.head)
 	if newWindow < buf.window {

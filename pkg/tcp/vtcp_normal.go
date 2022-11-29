@@ -89,6 +89,7 @@ func (conn *VTCPConn) SynSend() {
 	defer conn.mu.Unlock()
 	// [HandShake1] Send Syn
 	conn.sb = NewSendBuffer(conn.seqNum, DEFAULTWINDOWSIZE)
+	//sb == nil
 	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagSyn, conn.seqNum), []byte{})
 	conn.NodeSegSendChan <- seg
 	conn.rtmQueue <- seg
@@ -109,6 +110,7 @@ func (conn *VTCPConn) SynSend() {
 			conn.NodeSegSendChan <- seg
 			conn.state = proto.ESTABLISH
 			// [Client] Create send buffer
+			conn.sb.SetInitVal(conn.seqNum)
 			conn.sb.win = uint32(segRev.TCPhdr.WindowSize)
 			conn.scv = *sync.NewCond(&conn.mu)
 			conn.wcv = *sync.NewCond(&conn.mu)
@@ -267,7 +269,7 @@ func (conn *VTCPConn) VSBufferWriteFile() {
 				conn.wcv.Wait()
 			}
 		}
-
+		num2Send, err = reader.Read(content)
 	}
 	if err != io.EOF {
 		fmt.Println(err)
@@ -421,6 +423,8 @@ func (conn *VTCPConn) HandleRcvSegInRcvBuffer(segRev *proto.Segment) {
 	// }
 	ackNum, windowSize := conn.RcvBuf.WriteSeg2Buf(segRev)
 	headAcked := conn.RcvBuf.IsHeadAcked()
+	fmt.Println(conn.RcvBuf.head, conn.RcvBuf.una)
+	fmt.Println(ackNum, windowSize, headAcked)
 	if headAcked {
 		conn.ackNum = ackNum
 		conn.windowSize = windowSize
