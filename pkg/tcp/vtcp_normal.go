@@ -530,7 +530,8 @@ func (conn *VTCPConn) send(content []byte, seqNum uint32) {
 }
 
 func (conn *VTCPConn) send2(flags int, info string) {
-	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(flags, conn.seqNum), []byte{})
+	// conn.seqNum => sb.nxt
+	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(flags, conn.sb.GetNextSeq()), []byte{})
 	conn.NodeSegSendChan <- seg
 	conn.PrintOutgoing(seg, info)
 }
@@ -544,7 +545,7 @@ func (conn *VTCPConn) PrintIncoming(seg *proto.Segment, head string) {
 func (conn *VTCPConn) PrintOutgoing(seg *proto.Segment, head string) {
 	myDebug.Debugln("[%v] %v:%v sent to %v:%v, SEQ: %v, ACK: %v, Win: %v, FLAG: %v",
 		head, conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
-		conn.RemotePort, conn.seqNum, conn.ackNum, conn.windowSize, seg.TCPhdr.Flags)
+		conn.RemotePort, seg.TCPhdr.SeqNum, conn.ackNum, conn.windowSize, seg.TCPhdr.Flags)
 }
 
 func (conn *VTCPConn) GetTuple() string {

@@ -1,7 +1,6 @@
 package tcp
 
 import (
-	"fmt"
 	"tcpip/pkg/proto"
 )
 
@@ -98,6 +97,9 @@ func (sb *SendBuffer) GetSegmentToSendAndUpdateNxt(mtu int) ([]byte, uint32) {
 		sb.nxt += len
 		sb.win -= len
 	}
+	// fmt.Println("======================================")
+	// fmt.Printf("[FIN DEBUG] Current Next SeqNum is %v\n", sb.nxt)
+	// fmt.Println("======================================")
 	return payload, seqNum
 }
 
@@ -107,7 +109,19 @@ func (sb *SendBuffer) GetZeroProbe() ([]byte, uint32) {
 	payload := make([]byte, len)
 	copy(payload, sb.buffer[sb.getIdx(sb.nxt):sb.getIdx(sb.nxt)+len])
 	sb.nxt += 1
+	// fmt.Println("======================================")
+	// fmt.Printf("[FIN DEBUG] Current Next SeqNum is %v\n", sb.nxt)
+	// fmt.Println("======================================")
 	return payload, seqNum
+}
+
+func (sb *SendBuffer) GetNextSeq() uint32 {
+	seqNum := sb.nxt
+	return seqNum
+}
+
+func (sb *SendBuffer) NumOngoing() uint32 {
+	return sb.nxt - sb.una
 }
 
 // 12345 a bcde//
@@ -118,7 +132,7 @@ func (sb *SendBuffer) GetZeroProbe() ([]byte, uint32) {
 func (sb *SendBuffer) UpdateUNA(ack *proto.Segment) uint32 {
 	acked := uint32(0)
 	if ack.TCPhdr.AckNum > sb.una {
-		fmt.Println(ack.TCPhdr.AckNum)
+		// fmt.Println(ack.TCPhdr.AckNum)
 		// length of payload is (ackNum - sb.una)
 		for curSeqNum := sb.una; curSeqNum < ack.TCPhdr.AckNum; curSeqNum++ {
 			sb.buffer[sb.getIdx(curSeqNum)] = byte('*')
