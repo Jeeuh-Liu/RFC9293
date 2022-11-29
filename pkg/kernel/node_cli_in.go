@@ -148,7 +148,7 @@ func (node *Node) ScanClI() {
 				node.NodeCLIChan <- cli
 			} else if len(ws) == 3 && ws[0] == "rf" {
 				path := ws[1]
-				fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0x666)
+				fd, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 				if err != nil {
 					fmt.Printf("%v\n", err)
 					continue
@@ -168,12 +168,15 @@ func (node *Node) ScanClI() {
 				}
 				node.socketTable.DeleteSocket(uint16(socketId))
 				fmt.Printf("\n> ")
-				//stdout fd (1M = 1000000000)
-				//sf filename ip port
 			} else if len(ws) == 4 && ws[0] == "sf" {
-				fd, err := os.OpenFile(ws[1], os.O_RDONLY, 0x666)
+				fd, err := os.OpenFile(ws[1], os.O_RDONLY, 0777)
 				if err != nil {
 					fmt.Printf("%v\n", err)
+					continue
+				}
+				srcIP := node.RT.FindSrcIPAddr(ws[2])
+				if srcIP == "no" {
+					fmt.Println("v_connect() error: No route to host")
 					continue
 				}
 				port, err := strconv.Atoi(ws[3])
