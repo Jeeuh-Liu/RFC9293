@@ -121,7 +121,7 @@ func (conn *VTCPConn) SynSend() {
 			// [Client] Rev Segments
 			go conn.estabRevAndSend()
 			if conn.Fd != nil {
-				conn.VSBufferWriteFile()
+				go conn.VSBufferWriteFile()
 			}
 			return
 		}
@@ -248,14 +248,13 @@ func (conn *VTCPConn) VSBufferWrite(content []byte) {
 }
 
 func (conn *VTCPConn) VSBufferWriteFile() {
-
 	fd := conn.Fd
 	reader := bufio.NewReader(fd)
 	content := make([]byte, conn.sb.win)
 	num2Send, err := reader.Read(content)
 
 	for err == nil {
-
+		conn.mu.Lock()
 		for num2Send > 0 {
 			// fmt.Printf("Hello1, isFull: %v\n", conn.sb.IsFull())
 			if !conn.sb.IsFull() {
@@ -264,17 +263,33 @@ func (conn *VTCPConn) VSBufferWriteFile() {
 				num2Send -= int(bnum)
 				content = content[bnum:]
 				conn.scv.Signal()
+				fmt.Println("Notify")
 				// fmt.Println("Hello2")
 			} else {
 				conn.wcv.Wait()
 			}
 		}
+		conn.mu.Unlock()
 		content = make([]byte, conn.sb.win)
 		num2Send, err = reader.Read(content)
 	}
 	if err != io.EOF {
 		fmt.Println(err)
 	}
+
+	// for {
+	// 	content := make([]byte, proto.BUFFER_SIZE)
+	// 	n, err := reader.Read(content)
+	// 	if err != nil {
+	// 		if err == io.EOF {
+	// 			break
+	// 		}
+	// 		log.Fatalln(err)
+	// 	}
+	// 	content = content[:n]
+	// 	conn.VSBufferWrite(content)
+	// }
+
 	conn.CloseChan <- true
 	fd.Close()
 }
@@ -289,14 +304,18 @@ func (conn *VTCPConn) VSBufferSend() {
 			if conn.sb.win == 0 {
 				payload, seqNum := conn.sb.GetZeroProbe()
 				conn.send(payload, seqNum)
+				fmt.Println("Send")
 				conn.zeroProbe = true
 			} else {
 				// Get one segment, send it out and add it to retransmission queue
 				payload, seqNum := conn.sb.GetSegmentToSendAndUpdateNxt(mtu)
 				conn.send(payload, seqNum)
+				fmt.Println("Send")
 			}
 		} else {
+			fmt.Println("Sleep")
 			conn.scv.Wait()
+			fmt.Println("Wake up")
 		}
 	}
 }
