@@ -210,7 +210,7 @@ func (conn *VTCPConn) estabRevAndSend() {
 				}
 				// Retry FIN
 				go func() {
-					time.Sleep(1 * time.Second)
+					time.Sleep(100 * time.Millisecond)
 					fmt.Println("Retry FIN")
 					conn.CloseChan <- true
 				}()
@@ -248,7 +248,7 @@ func (conn *VTCPConn) VSBufferWrite(content []byte) {
 		// fmt.Printf("Hello1, isFull: %v\n", conn.sb.IsFull())
 		if !conn.sb.IsFull() {
 			bnum := conn.sb.WriteIntoBuffer(content)
-			myDebug.Debugln("[Client] %v:%v writes %v bytes into send buffer, CurrSendBuffer:%v", conn.LocalAddr.String(), conn.LocalPort, bnum, string(conn.sb.buffer))
+			// myDebug.Debugln("[Client] %v:%v writes %v bytes into send buffer, CurrSendBuffer:%v", conn.LocalAddr.String(), conn.LocalPort, bnum, string(conn.sb.buffer))
 			total -= bnum
 			content = content[bnum:]
 			conn.scv.Signal()
@@ -356,7 +356,7 @@ func (conn *VTCPConn) HandleRcvSegInSendBuffer(segRev *proto.Segment) {
 		conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
 		conn.RemotePort, segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum, segRev.TCPhdr.WindowSize)
 	acked := conn.sb.UpdateUNA(segRev)
-	myDebug.Debugln("[Client] After ACK, Send Buffer Content: %v", string(conn.sb.buffer))
+	// myDebug.Debugln("[Client] After ACK, Send Buffer Content: %v", string(conn.sb.buffer))
 	conn.wcv.Signal()
 	conn.sb.UpdateWin(segRev.TCPhdr.WindowSize)
 	if segRev.TCPhdr.WindowSize > 0 {
@@ -364,9 +364,9 @@ func (conn *VTCPConn) HandleRcvSegInSendBuffer(segRev *proto.Segment) {
 		conn.scv.Signal()
 	}
 	conn.seqNum += acked
-	fmt.Println("=====================================================")
-	fmt.Println("conn.seqNum is", conn.seqNum)
-	fmt.Println("=====================================================")
+	// fmt.Println("=====================================================")
+	// fmt.Println("conn.seqNum is", conn.seqNum)
+	// fmt.Println("=====================================================")
 	// myDebug.Debugln("[SendBuffer_RevACK] %v send buffer remaing bytes %v", conn.LocalAddr.String(), conn.sb.GetRemainBytes())
 	conn.mu.Unlock()
 }
@@ -410,7 +410,8 @@ func (conn *VTCPConn) retransmit(segR *proto.Segment) {
 		return
 	}
 	// retransmit if not acked
-	myDebug.Debugln("[Client] retransmit Payload %v: to ack it, SEQ needs to be at least %v. Curr SEQ: %v,  ", string(segR.Payload), segR.TCPhdr.SeqNum+uint32(len(segR.Payload)), conn.seqNum)
+	// myDebug.Debugln("[Client] retransmit Payload %v: to ack it, SEQ needs to be at least %v. Curr SEQ: %v,  ", string(segR.Payload), segR.TCPhdr.SeqNum+uint32(len(segR.Payload)), conn.seqNum)
+	myDebug.Debugln("[Client] retransmit : to ack it, SEQ needs to be at least %v. Curr SEQ: %v,  ", segR.TCPhdr.SeqNum+uint32(len(segR.Payload)), conn.seqNum)
 	conn.NodeSegSendChan <- segR
 	conn.rtmQueue <- segR
 }
@@ -525,6 +526,7 @@ func (conn *VTCPConn) RetrivFile(fd *os.File) {
 		}
 	}
 	conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_UNBLOCKCLI}
+	conn.CloseChan <- true
 	fd.Write(res)
 	fd.Close()
 }
@@ -537,8 +539,10 @@ func (conn *VTCPConn) send(content []byte, seqNum uint32) {
 	// add the segment to retransmission queue
 	conn.rtmQueue <- seg
 
-	myDebug.Debugln("[Client] %v:%v sent to %v:%v, SEQ: %v, ACK: %v, Payload: %v",
-		conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(), conn.RemotePort, seg.TCPhdr.SeqNum, conn.ackNum, string(seg.Payload))
+	// myDebug.Debugln("[Client] %v:%v sent to %v:%v, SEQ: %v, ACK: %v, Payload: %v",
+	// 	conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(), conn.RemotePort, seg.TCPhdr.SeqNum, conn.ackNum, string(seg.Payload))
+	myDebug.Debugln("[Client] %v:%v sent to %v:%v, SEQ: %v, ACK: %v",
+		conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(), conn.RemotePort, seg.TCPhdr.SeqNum, conn.ackNum)
 }
 
 func (conn *VTCPConn) send2(flags int, info string) {

@@ -50,14 +50,14 @@ const (
 	FIRST_PORT = 0
 
 	// DEFAULTPACKETMTU = 1400
-	DEFAULTPACKETMTU = 20 + 20 + 3
+	DEFAULTPACKETMTU = 20 + 20 + 1285
 	DEFAULTIPHDRLEN  = 20
 	DEFAULTTCPHDRLEN = 20
 
 	// Send Buffer
-	// BUFFER_SIZE = 1 << 16
-	BUFFER_SIZE = uint32(10)
-	MAXCONNUM   = uint16(65535)
+	BUFFER_SIZE = 1 << 16
+	// BUFFER_SIZE = uint32(10)
+	MAXCONNUM = uint16(65535)
 
 	RetranInterval = 300 * time.Millisecond
 )
