@@ -91,7 +91,7 @@ func (node *Node) handleSendSegment(nodeCLI *proto.NodeCLI) {
 		fmt.Printf("no VTCPConn with socket ID %v\n", socketID)
 		return
 	}
-	go conn.VSBufferWrite(nodeCLI.Bytes)
+	conn.VSBufferWrite(nodeCLI.Bytes)
 }
 
 // *****************************************************************************************

@@ -326,6 +326,7 @@ func (conn *VTCPConn) VSBufferSend() {
 			conn.scv.Wait()
 		}
 	}
+	// conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_UNBLOCKCLI}
 }
 
 func (conn *VTCPConn) VSBufferRcv() {
@@ -506,6 +507,7 @@ func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 		}
 	}
 	conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_UNBLOCKCLI}
+	fmt.Printf("To READ %v bytes, return %v bytes, content %v\n", numBytes, totalRead, string(res))
 }
 
 func (conn *VTCPConn) RetrivFile(fd *os.File) {
