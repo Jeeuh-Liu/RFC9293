@@ -440,9 +440,12 @@ func (conn *VTCPConn) HandleRcvSegInRcvBuffer(segRev *proto.Segment) {
 		conn.mu.Unlock()
 		return
 	}
-	myDebug.Debugln("[Server] %v:%v receive from %v:%v, SEQ: %v, ACK %v, Payload %v",
+	// myDebug.Debugln("[Server] %v:%v receive from %v:%v, SEQ: %v, ACK %v, Payload %v",
+	// 	conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
+	// 	conn.RemotePort, segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum, string(segRev.Payload))
+	myDebug.Debugln("[Server] %v:%v receive from %v:%v, SEQ: %v, ACK %v",
 		conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
-		conn.RemotePort, segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum, string(segRev.Payload))
+		conn.RemotePort, segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum)
 	// headAcked := conn.RcvBuf.IsHeadAcked()
 	// bug_fix: already acked can also write some bytes
 	// if status == EARLYARRIVAL || status == NEXTUNACKSEG || status == ALREADYACKED {
@@ -476,7 +479,7 @@ func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 	conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_BLOCKCLI}
 	for {
 		conn.mu.Lock()
-		fmt.Println("reach 376")
+		// fmt.Println("reach 376")
 		for !conn.RcvBuf.IsHeadAcked() {
 			conn.NonEmptyCond.Wait()
 		}
@@ -507,12 +510,14 @@ func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 
 func (conn *VTCPConn) RetrivFile(fd *os.File) {
 	res := []byte{}
-	conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_BLOCKCLI}
+	// conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_BLOCKCLI}
 	for {
 		conn.mu.Lock()
 		for !conn.RcvBuf.IsHeadAcked() {
+			// fmt.Println("Sleeping")
 			conn.NonEmptyCond.Wait()
 		}
+		// fmt.Println("Wakeup")
 		if conn.recvFIN {
 			conn.RcvBuf.una--
 		}
@@ -525,10 +530,14 @@ func (conn *VTCPConn) RetrivFile(fd *os.File) {
 			break
 		}
 	}
-	conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_UNBLOCKCLI}
+	// conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_UNBLOCKCLI}
 	conn.CloseChan <- true
 	fd.Write(res)
 	fd.Close()
+}
+
+func (conn *VTCPConn) VClose() {
+	conn.CloseChan <- true
 }
 
 // ********************************************************************************************
@@ -553,9 +562,12 @@ func (conn *VTCPConn) send2(flags int, info string) {
 }
 
 func (conn *VTCPConn) PrintIncoming(seg *proto.Segment, head string) {
-	myDebug.Debugln("[%v] %v:%v receive from %v:%v, SEQ: %v, ACK %v, Payload: %v, FLAG: %v",
+	// myDebug.Debugln("[%v] %v:%v receive from %v:%v, SEQ: %v, ACK %v, Payload: %v, FLAG: %v",
+	// 	head, conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(), conn.RemotePort,
+	// 	seg.TCPhdr.SeqNum, seg.TCPhdr.AckNum, string(seg.Payload), seg.TCPhdr.Flags)
+	myDebug.Debugln("[%v] %v:%v receive from %v:%v, SEQ: %v, ACK %v, FLAG: %v",
 		head, conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(), conn.RemotePort,
-		seg.TCPhdr.SeqNum, seg.TCPhdr.AckNum, string(seg.Payload), seg.TCPhdr.Flags)
+		seg.TCPhdr.SeqNum, seg.TCPhdr.AckNum, seg.TCPhdr.Flags)
 }
 
 func (conn *VTCPConn) PrintOutgoing(seg *proto.Segment, head string) {

@@ -169,6 +169,18 @@ func (node *Node) ScanClI() {
 				conn := node.socketTable.FindConnByID(uint16(socketId))
 				conn.CloseChan <- true
 				fmt.Printf("\n> ")
+			} else if len(ws) == 3 && ws[0] == "sd" {
+				socketId, err := strconv.Atoi(ws[1])
+				if err != nil {
+					continue
+				}
+				if ws[2] == "read" || ws[2] == "write" || ws[2] == "both" {
+					conn := node.socketTable.FindConnByID(uint16(socketId))
+					if conn != nil {
+						conn.CloseChan <- true
+					}
+				}
+				fmt.Printf("\n> ")
 			} else if len(ws) == 4 && ws[0] == "sf" {
 				fd, err := os.OpenFile(ws[1], os.O_RDONLY, 0777)
 				if err != nil {
