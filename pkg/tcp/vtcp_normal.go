@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net"
 	"os"
@@ -250,45 +251,45 @@ func (conn *VTCPConn) VSBufferWrite(content []byte) {
 func (conn *VTCPConn) VSBufferWriteFile() {
 	fd := conn.Fd
 	reader := bufio.NewReader(fd)
-	content := make([]byte, conn.sb.win)
-	num2Send, err := reader.Read(content)
+	// content := make([]byte, conn.sb.win)
+	// num2Send, err := reader.Read(content)
 
-	for err == nil {
-		conn.mu.Lock()
-		for num2Send > 0 {
-			// fmt.Printf("Hello1, isFull: %v\n", conn.sb.IsFull())
-			if !conn.sb.IsFull() {
-				bnum := conn.sb.WriteIntoBuffer(content)
-				myDebug.Debugln("[Client] %v:%v writes %v bytes into send buffer, CurrSendBuffer:%v", conn.LocalAddr.String(), conn.LocalPort, bnum, string(conn.sb.buffer))
-				num2Send -= int(bnum)
-				content = content[bnum:]
-				conn.scv.Signal()
-				fmt.Println("Notify")
-				// fmt.Println("Hello2")
-			} else {
-				conn.wcv.Wait()
-			}
-		}
-		conn.mu.Unlock()
-		content = make([]byte, conn.sb.win)
-		num2Send, err = reader.Read(content)
-	}
-	if err != io.EOF {
-		fmt.Println(err)
-	}
-
-	// for {
-	// 	content := make([]byte, proto.BUFFER_SIZE)
-	// 	n, err := reader.Read(content)
-	// 	if err != nil {
-	// 		if err == io.EOF {
-	// 			break
+	// for err == nil {
+	// 	conn.mu.Lock()
+	// 	for num2Send > 0 {
+	// 		// fmt.Printf("Hello1, isFull: %v\n", conn.sb.IsFull())
+	// 		if !conn.sb.IsFull() {
+	// 			bnum := conn.sb.WriteIntoBuffer(content)
+	// 			myDebug.Debugln("[Client] %v:%v writes %v bytes into send buffer, CurrSendBuffer:%v", conn.LocalAddr.String(), conn.LocalPort, bnum, string(conn.sb.buffer))
+	// 			num2Send -= int(bnum)
+	// 			content = content[bnum:]
+	// 			conn.scv.Signal()
+	// 			fmt.Println("Notify")
+	// 			// fmt.Println("Hello2")
+	// 		} else {
+	// 			conn.wcv.Wait()
 	// 		}
-	// 		log.Fatalln(err)
 	// 	}
-	// 	content = content[:n]
-	// 	conn.VSBufferWrite(content)
+	// 	conn.mu.Unlock()
+	// 	content = make([]byte, conn.sb.win)
+	// 	num2Send, err = reader.Read(content)
 	// }
+	// if err != io.EOF {
+	// 	fmt.Println(err)
+	// }
+
+	for {
+		content := make([]byte, proto.BUFFER_SIZE)
+		n, err := reader.Read(content)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			log.Fatalln(err)
+		}
+		content = content[:n]
+		conn.VSBufferWrite(content)
+	}
 
 	conn.CloseChan <- true
 	fd.Close()
