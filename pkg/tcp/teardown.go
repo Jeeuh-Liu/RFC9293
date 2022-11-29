@@ -21,7 +21,9 @@ func (conn *VTCPConn) doFINWAIT1() {
 			conn.PrintIncoming(segRev, "DEBUG")
 			flag := segRev.TCPhdr.Flags
 			if flag == ACK {
+				// change seqNum to nxtNum
 				if segRev.TCPhdr.AckNum <= conn.seqNum {
+					fmt.Println("AckNum, GetNextNum:", segRev.TCPhdr.AckNum, conn.sb.GetNextNum())
 					fmt.Println("enter 24")
 					conn.HandleRcvSegInSendBuffer(segRev)
 				}

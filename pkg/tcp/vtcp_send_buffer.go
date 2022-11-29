@@ -115,9 +115,14 @@ func (sb *SendBuffer) GetZeroProbe() ([]byte, uint32) {
 	return payload, seqNum
 }
 
-func (sb *SendBuffer) GetNextSeq() uint32 {
+func (sb *SendBuffer) GetFINMsgSeqNum() uint32 {
 	seqNum := sb.nxt
+	sb.nxt += 1
 	return seqNum
+}
+
+func (sb *SendBuffer) GetNextNum() uint32 {
+	return sb.nxt
 }
 
 func (sb *SendBuffer) NumOngoing() uint32 {

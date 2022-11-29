@@ -201,11 +201,20 @@ func (conn *VTCPConn) estabRevAndSend() {
 			fmt.Println("receive bit from closeChan")
 			if conn.state == proto.ESTABLISH {
 				conn.mu.Lock()
-				conn.state = proto.FINWAIT1
-				conn.send2(FIN, "SEND FIN -> FIN_WAIT1")
-				go conn.doFINWAIT1()
+				if conn.seqNum == conn.sb.GetNextNum() {
+					conn.state = proto.FINWAIT1
+					conn.send2(FIN, "SEND FIN -> FIN_WAIT1")
+					go conn.doFINWAIT1()
+					conn.mu.Unlock()
+					return
+				}
+				// Retry FIN
+				go func() {
+					time.Sleep(1 * time.Second)
+					fmt.Println("Retry FIN")
+					conn.CloseChan <- true
+				}()
 				conn.mu.Unlock()
-				return
 			}
 			if conn.state == proto.CLOSEWAIT {
 				conn.mu.Lock()
@@ -355,6 +364,9 @@ func (conn *VTCPConn) HandleRcvSegInSendBuffer(segRev *proto.Segment) {
 		conn.scv.Signal()
 	}
 	conn.seqNum += acked
+	fmt.Println("=====================================================")
+	fmt.Println("conn.seqNum is", conn.seqNum)
+	fmt.Println("=====================================================")
 	// myDebug.Debugln("[SendBuffer_RevACK] %v send buffer remaing bytes %v", conn.LocalAddr.String(), conn.sb.GetRemainBytes())
 	conn.mu.Unlock()
 }
@@ -531,7 +543,7 @@ func (conn *VTCPConn) send(content []byte, seqNum uint32) {
 
 func (conn *VTCPConn) send2(flags int, info string) {
 	// conn.seqNum => sb.nxt
-	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(flags, conn.sb.GetNextSeq()), []byte{})
+	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(flags, conn.seqNum), []byte{})
 	conn.NodeSegSendChan <- seg
 	conn.PrintOutgoing(seg, info)
 }
