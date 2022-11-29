@@ -311,7 +311,7 @@ func (conn *VTCPConn) VSBufferSend() {
 	defer conn.mu.Unlock()
 	// mtu := int(uint32(proto.DEFAULTIPHDRLEN) + uint32(proto.DEFAULTTCPHDRLEN) + uint32(conn.sb.win))
 	mtu := proto.DEFAULTPACKETMTU - proto.DEFAULTIPHDRLEN - proto.DEFAULTTCPHDRLEN
-	for conn.state == proto.ESTABLISH {
+	for conn.state == proto.ESTABLISH || conn.state == proto.CLOSEWAIT {
 		if conn.sb.CanSend() && !conn.zeroProbe {
 			if conn.sb.win == 0 {
 				payload, seqNum := conn.sb.GetZeroProbe()
