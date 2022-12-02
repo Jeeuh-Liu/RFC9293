@@ -22,6 +22,7 @@ const (
 	MINACKNUM         = 1
 	DEFAULTDATAOFFSET = 20
 	DEFAULTWINDOWSIZE = 65535
+	// DEFAULTWINDOWSIZE = 5
 )
 
 type VTCPConn struct {
@@ -175,7 +176,8 @@ func (conn *VTCPConn) estabRevAndSend() {
 	for {
 		select {
 		case segRev := <-conn.SegRcvChan:
-			if segRev.TCPhdr.Flags == ACK {
+			// fmt.Println(segRev)
+			if segRev.TCPhdr.Flags|ACK != 0 {
 				conn.handleACKSeg(segRev)
 			}
 			if segRev.TCPhdr.Flags == FIN {
@@ -368,7 +370,7 @@ func (conn *VTCPConn) HandleRcvSegInSendBuffer(segRev *proto.Segment) {
 	// fmt.Println("=====================================================")
 	// fmt.Println("conn.seqNum is", conn.seqNum)
 	// fmt.Println("=====================================================")
-	// myDebug.Debugln("[SendBuffer_RevACK] %v send buffer remaing bytes %v", conn.LocalAddr.String(), conn.sb.GetRemainBytes())
+	myDebug.Debugln("[SendBuffer_RevACK] %v send buffer remaing bytes %v", conn.LocalAddr.String(), conn.sb.GetRemainBytes())
 	conn.mu.Unlock()
 }
 
@@ -411,8 +413,8 @@ func (conn *VTCPConn) retransmit(segR *proto.Segment) {
 		return
 	}
 	// retransmit if not acked
-	// myDebug.Debugln("[Client] retransmit Payload %v: to ack it, SEQ needs to be at least %v. Curr SEQ: %v,  ", string(segR.Payload), segR.TCPhdr.SeqNum+uint32(len(segR.Payload)), conn.seqNum)
-	myDebug.Debugln("[Client] retransmit : to ack it, SEQ needs to be at least %v. Curr SEQ: %v,  ", segR.TCPhdr.SeqNum+uint32(len(segR.Payload)), conn.seqNum)
+	myDebug.Debugln("[Client] retransmit Payload %v: to ack it, SEQ needs to be at least %v. Curr SEQ: %v,  ", string(segR.Payload), segR.TCPhdr.SeqNum+uint32(len(segR.Payload)), conn.seqNum)
+	// myDebug.Debugln("[Client] retransmit : to ack it, SEQ needs to be at least %v. Curr SEQ: %v,  ", segR.TCPhdr.SeqNum+uint32(len(segR.Payload)), conn.seqNum)
 	conn.NodeSegSendChan <- segR
 	conn.rtmQueue <- segR
 }
@@ -441,12 +443,12 @@ func (conn *VTCPConn) HandleRcvSegInRcvBuffer(segRev *proto.Segment) {
 		conn.mu.Unlock()
 		return
 	}
-	// myDebug.Debugln("[Server] %v:%v receive from %v:%v, SEQ: %v, ACK %v, Payload %v",
-	// 	conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
-	// 	conn.RemotePort, segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum, string(segRev.Payload))
-	myDebug.Debugln("[Server] %v:%v receive from %v:%v, SEQ: %v, ACK %v",
+	myDebug.Debugln("[Server] %v:%v receive from %v:%v, SEQ: %v, ACK %v, Payload %v",
 		conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
-		conn.RemotePort, segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum)
+		conn.RemotePort, segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum, string(segRev.Payload))
+	// myDebug.Debugln("[Server] %v:%v receive from %v:%v, SEQ: %v, ACK %v",
+	// 	conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
+	// 	conn.RemotePort, segRev.TCPhdr.SeqNum, segRev.TCPhdr.AckNum)
 	// headAcked := conn.RcvBuf.IsHeadAcked()
 	// bug_fix: already acked can also write some bytes
 	// if status == EARLYARRIVAL || status == NEXTUNACKSEG || status == ALREADYACKED {
@@ -459,13 +461,18 @@ func (conn *VTCPConn) HandleRcvSegInRcvBuffer(segRev *proto.Segment) {
 	// }
 	ackNum, windowSize := conn.RcvBuf.WriteSeg2Buf(segRev)
 	headAcked := conn.RcvBuf.IsHeadAcked()
+	// fmt.Println(headAcked, conn.ackNum, ackNum)
 	if headAcked {
 		conn.ackNum = ackNum
 		conn.windowSize = windowSize
-		conn.NonEmptyCond.Broadcast()
+		conn.NonEmptyCond.Signal()
 	}
 
 	seg := proto.NewSegment(conn.LocalAddr.String(), conn.RemoteAddr.String(), conn.buildTCPHdr(header.TCPFlagAck, conn.seqNum), []byte{})
+	// fmt.Println("==============================================")
+	// fmt.Println("current Buffer:", conn.RcvBuf.DisplayBuf())
+	// fmt.Println("==============================================")
+
 	myDebug.Debugln("[Server] %v:%v sent to %v:%v, SEQ: %v, ACK: %v, Win: %v",
 		conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
 		conn.RemotePort, conn.seqNum, conn.ackNum, conn.windowSize)
@@ -477,7 +484,7 @@ func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 	res := []byte{}
 	totalRead := uint32(0)
 	toRead := numBytes
-	conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_BLOCKCLI}
+	// conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_BLOCKCLI}
 	for {
 		conn.mu.Lock()
 		// fmt.Println("reach 376")
@@ -506,7 +513,7 @@ func (conn *VTCPConn) Retriv(numBytes uint32, isBlock bool) {
 			break
 		}
 	}
-	conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_UNBLOCKCLI}
+	// conn.CLIChan <- &proto.NodeCLI{CLIType: proto.CLI_UNBLOCKCLI}
 	fmt.Printf("To READ %v bytes, return %v bytes, content %v\n", numBytes, totalRead, string(res))
 }
 
@@ -550,10 +557,10 @@ func (conn *VTCPConn) send(content []byte, seqNum uint32) {
 	// add the segment to retransmission queue
 	conn.rtmQueue <- seg
 
-	// myDebug.Debugln("[Client] %v:%v sent to %v:%v, SEQ: %v, ACK: %v, Payload: %v",
-	// 	conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(), conn.RemotePort, seg.TCPhdr.SeqNum, conn.ackNum, string(seg.Payload))
-	myDebug.Debugln("[Client] %v:%v sent to %v:%v, SEQ: %v, ACK: %v",
-		conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(), conn.RemotePort, seg.TCPhdr.SeqNum, conn.ackNum)
+	myDebug.Debugln("[Client] %v:%v sent to %v:%v, SEQ: %v, ACK: %v, Payload: %v",
+		conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(), conn.RemotePort, seg.TCPhdr.SeqNum, conn.ackNum, string(seg.Payload))
+	// myDebug.Debugln("[Client] %v:%v sent to %v:%v, SEQ: %v, ACK: %v",
+	// 	conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(), conn.RemotePort, seg.TCPhdr.SeqNum, conn.ackNum)
 }
 
 func (conn *VTCPConn) send2(flags int, info string) {
@@ -564,18 +571,18 @@ func (conn *VTCPConn) send2(flags int, info string) {
 }
 
 func (conn *VTCPConn) PrintIncoming(seg *proto.Segment, head string) {
-	// myDebug.Debugln("[%v] %v:%v receive from %v:%v, SEQ: %v, ACK %v, Payload: %v, FLAG: %v",
-	// 	head, conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(), conn.RemotePort,
-	// 	seg.TCPhdr.SeqNum, seg.TCPhdr.AckNum, string(seg.Payload), seg.TCPhdr.Flags)
-	myDebug.Debugln("[%v] %v:%v receive from %v:%v, SEQ: %v, ACK %v, FLAG: %v",
+	myDebug.Debugln("[%v] %v:%v receive from %v:%v, SEQ: %v, ACK %v, Payload: %v, FLAG: %v",
 		head, conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(), conn.RemotePort,
-		seg.TCPhdr.SeqNum, seg.TCPhdr.AckNum, seg.TCPhdr.Flags)
+		seg.TCPhdr.SeqNum, seg.TCPhdr.AckNum, string(seg.Payload), seg.TCPhdr.Flags)
+	// myDebug.Debugln("[%v] %v:%v receive from %v:%v, SEQ: %v, ACK %v, FLAG: %v",
+	// 	head, conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(), conn.RemotePort,
+	// 	seg.TCPhdr.SeqNum, seg.TCPhdr.AckNum, seg.TCPhdr.Flags)
 }
 
 func (conn *VTCPConn) PrintOutgoing(seg *proto.Segment, head string) {
-	myDebug.Debugln("[%v] %v:%v sent to %v:%v, SEQ: %v, ACK: %v, Win: %v, FLAG: %v",
+	myDebug.Debugln("[%v] %v:%v sent to %v:%v, SEQ: %v, ACK: %v, Payload: %v, Win: %v, FLAG: %v",
 		head, conn.LocalAddr.String(), conn.LocalPort, conn.RemoteAddr.String(),
-		conn.RemotePort, seg.TCPhdr.SeqNum, conn.ackNum, conn.windowSize, seg.TCPhdr.Flags)
+		conn.RemotePort, seg.TCPhdr.SeqNum, conn.ackNum, string(seg.Payload), conn.windowSize, seg.TCPhdr.Flags)
 }
 
 func (conn *VTCPConn) GetTuple() string {

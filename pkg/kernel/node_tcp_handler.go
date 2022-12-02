@@ -16,6 +16,7 @@ func (node *Node) handleTCPSegment() {
 		tuple := segment.FormTuple()
 		if conn := node.socketTable.FindConn(tuple); conn != nil {
 			conn.SegRcvChan <- segment
+			// fmt.Println("receive one segment")
 			continue
 		}
 		dstPort := segment.TCPhdr.DstPort
@@ -91,7 +92,7 @@ func (node *Node) handleSendSegment(nodeCLI *proto.NodeCLI) {
 		fmt.Printf("no VTCPConn with socket ID %v\n", socketID)
 		return
 	}
-	conn.VSBufferWrite(nodeCLI.Bytes)
+	go conn.VSBufferWrite(nodeCLI.Bytes)
 }
 
 // *****************************************************************************************
@@ -116,5 +117,5 @@ func (node *Node) handleRecvSegment(nodeCLI *proto.NodeCLI) {
 	}
 	isBlock := nodeCLI.Bytes[0] == 'y'
 	numBytes := nodeCLI.Val32
-	conn.Retriv(numBytes, isBlock)
+	go conn.Retriv(numBytes, isBlock)
 }

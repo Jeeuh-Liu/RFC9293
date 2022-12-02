@@ -1,6 +1,7 @@
 package tcp
 
 import (
+	"fmt"
 	"tcpip/pkg/myDebug"
 	"tcpip/pkg/proto"
 )
@@ -79,11 +80,18 @@ func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 		return buf.una, uint16(buf.window)
 	}
 	//ack,b
+	numPrev := uint32(0)
 	for _, b := range seg.Payload {
-		buf.buffer[pos] = b
-		pos++
-		if pos >= buf.head+DEFAULTWINDOWSIZE {
+		// ignore the acked
+		if pos < buf.head {
+			numPrev += 1
+			pos++
+		} else if pos >= buf.head+DEFAULTWINDOWSIZE {
+			// break if too far away
 			break
+		} else {
+			buf.buffer[pos] = b
+			pos++
 		}
 	}
 	//buf.una - buf.head
@@ -93,7 +101,9 @@ func (buf *RecvBuffer) WriteSeg2Buf(seg *proto.Segment) (uint32, uint16) {
 		buf.window = newWindow
 	}
 	//-------|-----|--------xxxxxx
-	if buf.una == seg.TCPhdr.SeqNum {
+	start := seg.TCPhdr.SeqNum + numPrev
+	fmt.Println(buf.una, start)
+	if buf.una == start {
 		_, found := buf.buffer[pos]
 		for found {
 			pos++
@@ -165,9 +175,9 @@ func (buf *RecvBuffer) SetWindowSize(size uint32) {
 	buf.window = size
 }
 
-// func calcIndex(pos uint32) uint32 {
-// 	return pos % DEFAULTWINDOWSIZE
-// }
+func calcIndex(pos uint32) uint32 {
+	return pos % DEFAULTWINDOWSIZE
+}
 
 func (buf *RecvBuffer) GetWindowSize() uint16 {
 	return uint16(buf.window)
